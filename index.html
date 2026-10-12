@@ -1,0 +1,1592 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>주식 거래비용 계산기 · 똑재TV</title>
+<meta name="description" content="국내주식·ETF와 미국주식을 한 번 사고팔 때 드는 수수료·증권거래세·환전비용·SEC fee를 계산하고, 비용을 뺀 실제 수익률과 본전 매도가, 1년에 여러 번 사고팔 때의 연간 비용까지 보여드립니다.">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+  :root {
+    --bg: #F5EFE6;
+    --bg-alt: #EFE7DA;
+    --ink: #1A1A1A;
+    --ink-soft: #4A4A4A;
+    --ink-mute: #8B8276;
+    --accent: #D9542B;
+    --accent-soft: #F4D5C4;
+    --border: #E5DCC8;
+    --white: #FBF7F0;
+    --brown: #8B6F47;
+    --beige-gold: #C4A57B;
+    --dark-warm: #3A2F26;
+    --dark-warm-soft: #5A4A3D;
+    --green: #4A5A4A;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, sans-serif;
+    background: var(--bg);
+    color: var(--ink);
+    padding: 32px 24px;
+    font-weight: 600;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+  }
+  .container { max-width: 1200px; margin: 0 auto; }
+
+  /* 헤더 */
+  header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 40px; }
+  .logo { display: flex; align-items: center; gap: 12px; }
+  .logo-icon {
+    width: 40px; height: 40px; background: var(--dark-warm); color: var(--white);
+    border-radius: 10px; display: flex; align-items: center; justify-content: center;
+    font-weight: 900; font-size: 20px;
+  }
+  .logo-name { font-size: 18px; font-weight: 900; letter-spacing: -0.5px; }
+  .logo-sub { font-size: 10px; color: var(--ink-mute); font-weight: 700; letter-spacing: 1px; }
+
+  /* 히어로 */
+  .hero { margin-bottom: 32px; }
+  .tag {
+    display: inline-flex; align-items: center; gap: 6px;
+    background: var(--white); border: 1.5px solid var(--accent); color: var(--accent);
+    padding: 6px 14px; border-radius: 999px; font-size: 12px; font-weight: 700; letter-spacing: 0.5px;
+    margin-bottom: 20px;
+  }
+  .tag .dot { width: 6px; height: 6px; background: var(--accent); border-radius: 50%; }
+  .hero-title { font-size: 64px; font-weight: 900; letter-spacing: -2.5px; line-height: 1.05; margin-bottom: 20px; }
+  .underline-mark { background: linear-gradient(transparent 60%, var(--accent-soft) 60%); padding: 0 4px; }
+  .hero-desc { font-size: 17px; color: var(--ink-soft); font-weight: 500; line-height: 1.7; }
+
+  /* 상단 CTA */
+  .top-cta {
+    background: var(--bg-alt); border: 1px solid var(--border); border-radius: 16px;
+    padding: 18px 24px; margin-bottom: 32px;
+    display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 16px;
+  }
+  .top-cta-text { font-size: 14px; color: var(--ink-soft); font-weight: 600; }
+  .top-cta-links { display: flex; gap: 8px; flex-wrap: wrap; }
+  .top-cta-link {
+    display: inline-flex; align-items: center; gap: 6px; padding: 8px 14px; border-radius: 8px;
+    font-size: 13px; font-weight: 700; text-decoration: none;
+    background: var(--white); border: 1.5px solid var(--border); color: var(--ink);
+  }
+  .top-cta-link.primary { background: var(--accent); color: var(--white); border-color: var(--accent); }
+  .naver-mark {
+    display: inline-flex; align-items: center; justify-content: center; width: 16px; height: 16px;
+    background: #03C75A; color: #FFFFFF; font-weight: 900; font-size: 11px; border-radius: 3px;
+    line-height: 1; letter-spacing: -0.5px; flex-shrink: 0;
+  }
+
+  /* 카드 / 스텝 */
+  .card { background: var(--white); border: 1px solid var(--border); border-radius: 20px; padding: 28px; margin-bottom: 32px; }
+  .step-label { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+  .step-line { width: 28px; height: 2px; background: var(--accent); }
+  .step-text { font-size: 12px; font-weight: 800; letter-spacing: 1.5px; color: var(--accent); }
+  .card-title { font-size: 24px; font-weight: 900; letter-spacing: -0.6px; margin-bottom: 6px; }
+  .card-subtitle { font-size: 14px; color: var(--ink-mute); font-weight: 500; margin-bottom: 22px; line-height: 1.6; }
+
+  /* 모드 탭 */
+  .mode-tabs { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+  .mode-tab {
+    text-align: left; background: var(--white); border: 1.5px solid var(--border); border-radius: 16px;
+    padding: 18px 20px; cursor: pointer; font-family: inherit; color: var(--ink);
+    transition: all 0.15s ease;
+  }
+  .mode-tab:hover { border-color: var(--accent); }
+  .mode-tab .mt-num { font-size: 11px; font-weight: 800; letter-spacing: 1px; color: var(--ink-mute); margin-bottom: 6px; display: block; }
+  .mode-tab .mt-title { font-size: 18px; font-weight: 900; letter-spacing: -0.4px; display: block; margin-bottom: 4px; }
+  .mode-tab .mt-desc { font-size: 13px; color: var(--ink-mute); font-weight: 500; display: block; }
+  .mode-tab.active { background: var(--dark-warm); border-color: var(--dark-warm); color: var(--white); }
+  .mode-tab.active .mt-num { color: var(--accent-soft); }
+  .mode-tab.active .mt-desc { color: #D9D2C5; }
+
+  /* 입력 */
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+  .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; }
+  .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
+  .input-group { margin-bottom: 18px; }
+  .input-group:last-child { margin-bottom: 0; }
+  .label { display: block; font-size: 12px; font-weight: 700; letter-spacing: 0.5px; color: var(--ink-soft); margin-bottom: 8px; }
+  input[type=number], select {
+    background: var(--white); border: 1.5px solid var(--border); border-radius: 10px;
+    padding: 12px 14px; font-family: inherit; font-size: 16px; color: var(--ink); font-weight: 700;
+    transition: all 0.15s ease; width: 100%;
+  }
+  input:focus, select:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+  .input-hint { font-size: 12px; color: var(--ink-mute); font-weight: 600; margin-top: 6px; }
+  .input-wrap { position: relative; }
+  .input-wrap input { padding-right: 130px; }
+  /* 숫자 바로 뒤에 붙는 단위 (만원·년·%) — 위치는 JS가 글자 폭을 재서 맞춘다 */
+  .input-unit { position: absolute; top: 50%; transform: translateY(-50%); left: 0; pointer-events: none;
+    font-size: 15px; font-weight: 700; color: var(--ink-mute); white-space: nowrap; visibility: hidden; }
+  .input-currency {
+    position: absolute; right: 12px; top: 50%; transform: translateY(-50%);
+    background: var(--accent-soft); color: var(--accent); font-size: 13px; font-weight: 800;
+    padding: 5px 10px; border-radius: 6px; pointer-events: none; letter-spacing: -0.3px;
+    white-space: nowrap; max-width: 110px; overflow: hidden; text-overflow: ellipsis;
+  }
+  .input-currency.empty { background: transparent; color: var(--ink-mute); font-weight: 600; }
+  .adv-set { margin-top: 20px; border: 1px solid var(--border); border-radius: 16px; background: var(--bg); padding: 0 20px; }
+  .adv-set > summary { cursor: pointer; list-style: none; display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; padding: 16px 0; }
+  .adv-set > summary::-webkit-details-marker { display: none; }
+  .adv-set > summary::before { content: '+'; display: inline-flex; width: 22px; height: 22px; border-radius: 50%; background: var(--accent); color: #fff; font-weight: 800; align-items: center; justify-content: center; font-size: 15px; }
+  .adv-set[open] > summary::before { content: '−'; }
+  .adv-set-title { font-weight: 800; font-size: 15px; color: var(--dark-warm); }
+  .adv-set-sum { font-size: 13px; font-weight: 700; color: var(--brown); }
+  .sub-card { background: var(--bg); border: 1px solid var(--border); border-radius: 16px; padding: 20px; }
+  .sub-card-title { font-size: 15px; font-weight: 800; margin-bottom: 14px; letter-spacing: -0.3px; }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+  .chip {
+    background: var(--white); border: 1.5px solid var(--border); color: var(--ink-soft);
+    border-radius: 999px; padding: 5px 12px; font-family: inherit; font-size: 12.5px; font-weight: 700; cursor: pointer;
+    transition: all 0.15s ease;
+  }
+  .chip:hover { border-color: var(--accent); color: var(--accent); }
+  .chip.on { background: var(--accent); border-color: var(--accent); color: var(--white); }
+  .is-hidden { display: none !important; }
+  .fixed-note {
+    background: var(--accent-soft); color: var(--accent); border-radius: 10px; padding: 12px 14px;
+    font-size: 13.5px; font-weight: 700; line-height: 1.55;
+  }
+
+  /* 토글 */
+  .toggle-row { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+  .toggle-text-title { font-size: 15px; font-weight: 800; }
+  .toggle-text-desc { font-size: 13px; color: var(--ink-mute); font-weight: 500; margin-top: 2px; }
+  .toggle-switch { position: relative; display: inline-block; width: 56px; height: 30px; flex-shrink: 0; }
+  .toggle-switch input { opacity: 0; width: 0; height: 0; }
+  .toggle-slider { position: absolute; cursor: pointer; inset: 0; background: #C4B8A3; transition: 0.25s; border-radius: 30px; }
+  .toggle-slider:before {
+    position: absolute; content: ""; height: 22px; width: 22px; left: 4px; bottom: 4px;
+    background: var(--white); transition: 0.25s; border-radius: 50%; box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+  }
+  .toggle-switch input:checked + .toggle-slider { background: var(--accent); }
+  .toggle-switch input:checked + .toggle-slider:before { transform: translateX(26px); }
+  .inflation-body { margin-top: 18px; padding-top: 18px; border-top: 1px dashed var(--border); }
+  .radio-row { display: flex; flex-direction: column; gap: 8px; }
+  .radio-opt {
+    display: flex; gap: 10px; align-items: flex-start; background: var(--white); border: 1.5px solid var(--border);
+    border-radius: 12px; padding: 12px 14px; cursor: pointer; transition: all 0.15s ease;
+  }
+  .radio-opt:hover { border-color: var(--accent); }
+  .radio-opt input { margin-top: 4px; accent-color: var(--accent); }
+  .radio-opt .ro-title { font-size: 14px; font-weight: 800; }
+  .radio-opt .ro-desc { font-size: 12.5px; color: var(--ink-mute); font-weight: 500; margin-top: 2px; }
+  .radio-opt.on { border-color: var(--accent); background: #FCEFE6; }
+
+  /* 결과 */
+  .verdict {
+    background: var(--dark-warm); color: var(--white); border-radius: 20px; padding: 30px 32px; margin-bottom: 20px;
+  }
+  .verdict-label { font-size: 12px; font-weight: 800; letter-spacing: 1.5px; color: var(--accent-soft); margin-bottom: 10px; }
+  .verdict-main { font-size: 30px; font-weight: 900; letter-spacing: -0.8px; line-height: 1.3; }
+  .verdict-main .hl { color: #FFB38F; }
+  .verdict-sub { font-size: 15px; color: #D9D2C5; font-weight: 500; margin-top: 12px; line-height: 1.7; }
+  .verdict-sub strong { color: var(--white); }
+
+  .stat-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 32px; }
+  .stat-card { background: var(--white); border: 1px solid var(--border); border-radius: 16px; padding: 22px; }
+  .stat-card.accent { background: var(--accent); border-color: var(--accent); color: var(--white); }
+  .stat-card.accent .stat-label, .stat-card.accent .stat-sub { color: #FDE3D6; }
+  .stat-card.accent-green { background: var(--green); border-color: var(--green); color: var(--white); }
+  .stat-card.accent-green .stat-label, .stat-card.accent-green .stat-sub { color: #B8C4B8; }
+  .stat-label { font-size: 11px; font-weight: 700; letter-spacing: 1px; color: var(--ink-mute); margin-bottom: 8px; }
+  .stat-value { font-size: 28px; font-weight: 900; letter-spacing: -1px; line-height: 1.15; }
+  .stat-sub { font-size: 13px; color: var(--ink-mute); margin-top: 6px; font-weight: 500; line-height: 1.5; }
+
+  .chart-title { font-size: 18px; font-weight: 800; letter-spacing: -0.3px; margin-bottom: 4px; }
+  .chart-subtitle { font-size: 13px; color: var(--ink-mute); font-weight: 500; margin-bottom: 18px; line-height: 1.6; }
+  .chart-container { position: relative; height: 360px; width: 100%; }
+  .chart-container.sm { height: 300px; }
+
+  /* 시나리오 표 */
+  .table-wrap { overflow-x: auto; margin-top: 16px; border-radius: 12px; }
+  .data-table { width: 100%; border-collapse: collapse; font-size: 13px; min-width: 760px; }
+  .data-table th {
+    background: var(--bg-alt); padding: 12px 10px; text-align: right; font-weight: 700; color: var(--ink-soft);
+    font-size: 11.5px; border-bottom: 1.5px solid var(--border); white-space: nowrap;
+  }
+  .data-table th:first-child { text-align: center; }
+  .data-table td {
+    padding: 11px 10px; text-align: right; border-bottom: 1px solid var(--border);
+    font-weight: 600; color: var(--ink); white-space: nowrap;
+  }
+  .data-table td:first-child { text-align: center; font-weight: 800; color: var(--accent); }
+  .data-table tbody tr:hover { background: var(--bg-alt); }
+  .data-table .highlight-row { background: var(--accent-soft); }
+  .data-table .highlight-row td { font-weight: 800; }
+  .data-table td.c-accent { color: var(--accent); font-weight: 800; }
+  .data-table td.c-brown { color: var(--brown); }
+  .data-table td.c-green { color: var(--green); }
+  .data-table td.c-left { text-align: left; }
+  .scen-table { min-width: 560px; }
+  .lump-note { display: block; margin-top: 10px; padding-top: 10px; border-top: 1px dashed rgba(255,255,255,0.35); }
+  .tag-mini.base { background: var(--brown); }
+  .tag-mini {
+    display: inline-block; font-size: 10.5px; font-weight: 800; padding: 2px 8px; border-radius: 999px;
+    background: var(--accent); color: var(--white); margin-left: 6px; vertical-align: 1px;
+  }
+
+  /* 인사이트 */
+  .insight-box { background: var(--dark-warm); color: var(--white); border-radius: 20px; padding: 36px; margin-bottom: 24px; }
+  .insight-label { display: flex; align-items: center; gap: 8px; margin-bottom: 16px; }
+  .insight-label-text { font-size: 12px; font-weight: 800; letter-spacing: 1.5px; color: var(--accent-soft); }
+  .insight-title { font-size: 24px; font-weight: 900; margin-bottom: 16px; letter-spacing: -0.5px; line-height: 1.35; }
+  .insight-desc { font-size: 15px; line-height: 1.75; color: #D9D2C5; font-weight: 500; }
+  .insight-desc strong { color: var(--white); }
+  .insight-cta {
+    margin-top: 28px; padding-top: 24px; border-top: 1px solid rgba(255,255,255,0.12);
+    display: flex; flex-wrap: wrap; gap: 12px; align-items: center;
+  }
+  .insight-cta-text { font-size: 14px; color: #D9D2C5; font-weight: 600; margin-right: 8px; }
+  .cta-link {
+    display: inline-flex; align-items: center; gap: 8px; padding: 10px 18px; border-radius: 10px;
+    font-size: 13px; font-weight: 700; text-decoration: none; transition: all 0.2s ease; letter-spacing: -0.2px;
+  }
+  .cta-link.primary { background: var(--accent); color: var(--white); }
+  .cta-link.primary:hover { background: #E66740; transform: translateY(-1px); }
+  .cta-link.secondary { background: rgba(255,255,255,0.08); color: var(--white); border: 1px solid rgba(255,255,255,0.15); }
+  .cta-link.secondary:hover { background: rgba(255,255,255,0.15); transform: translateY(-1px); }
+
+  .link-row { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; justify-content: space-between; }
+  .btn {
+    background: var(--dark-warm); color: var(--white); border: none; padding: 11px 18px; border-radius: 12px;
+    font-family: inherit; font-weight: 700; cursor: pointer; transition: all 0.15s ease; font-size: 14px;
+    display: inline-flex; align-items: center; gap: 8px; text-decoration: none;
+  }
+  .btn:hover { background: var(--accent); }
+  .btn.ghost { background: var(--white); color: var(--ink); border: 1.5px solid var(--border); }
+  .btn.ghost:hover { border-color: var(--accent); color: var(--accent); }
+  .from-bar {
+    display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; justify-content: space-between;
+    background: var(--accent-soft); border: 1px solid var(--accent); border-radius: 14px; padding: 14px 18px;
+    margin-bottom: 24px; font-size: 14.5px; font-weight: 700; line-height: 1.6;
+  }
+  .from-bar a { color: var(--accent); font-weight: 800; white-space: nowrap; text-decoration: none; }
+
+  .hub-back { display: inline-block; font-size: 13px; color: var(--ink-mute); font-weight: 600; text-decoration: none; margin-bottom: 12px; }
+  .hub-back:hover { color: var(--accent); }
+  footer { text-align: center; font-size: 12.5px; color: var(--ink-mute); font-weight: 500; line-height: 1.8; padding: 24px 0 8px; }
+  @media (max-width: 1100px) {
+    .stat-grid { grid-template-columns: 1fr 1fr; }
+  }
+  @media (max-width: 768px) {
+    body { padding: 16px 12px; }
+    header { margin-bottom: 24px; }
+    .card { padding: 18px 16px !important; margin-bottom: 20px !important; border-radius: 16px !important; }
+    .hero-title { font-size: 34px !important; letter-spacing: -1.2px !important; line-height: 1.18 !important; }
+    .hero-desc { font-size: 15px; }
+    .hero-desc br { display: none; }
+    .top-cta { flex-direction: column; align-items: stretch; padding: 16px; }
+    .top-cta-links { width: 100%; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .top-cta-link { justify-content: center; }
+    .mode-tabs { grid-template-columns: 1fr; gap: 8px; }
+    .mode-tab { padding: 14px 16px; }
+    .mode-tab .mt-title { font-size: 16px; }
+    .grid-2, .grid-3 { grid-template-columns: 1fr !important; gap: 14px !important; }
+    .grid-4 { grid-template-columns: 1fr 1fr !important; gap: 10px !important; }
+    .sub-card { padding: 16px; }
+    .input-wrap input { padding-right: 112px; }
+    .input-currency { max-width: 96px; font-size: 12px; }
+    .card-title { font-size: 20px; }
+    .verdict { padding: 22px 18px; border-radius: 16px; }
+    .verdict-main { font-size: 22px; letter-spacing: -0.5px; }
+    .verdict-sub { font-size: 14px; }
+    .stat-grid { grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px; }
+    .stat-card { padding: 16px !important; border-radius: 14px !important; }
+    .stat-value { font-size: 21px !important; }
+    .stat-sub { font-size: 12px; }
+    .chart-title { font-size: 15px; line-height: 1.4; }
+    .chart-container { height: 280px !important; }
+    .chart-container.sm { height: 260px !important; }
+    .insight-box { padding: 24px 18px; border-radius: 16px; }
+    .insight-title { font-size: 19px !important; }
+    .insight-cta { flex-direction: column; align-items: stretch; }
+    .cta-link { justify-content: center; }
+    .table-wrap { margin: 16px -16px 0; padding: 0 16px; -webkit-overflow-scrolling: touch; }
+    .data-table { font-size: 11.5px; min-width: 640px; }
+    .scen-table { min-width: 480px; }
+    .data-table th { padding: 8px 6px; font-size: 10.5px; }
+    .data-table td { padding: 8px 6px; }
+  }
+  @media (max-width: 380px) {
+    .hero-title { font-size: 29px !important; }
+    .stat-grid { grid-template-columns: 1fr; }
+    .top-cta-links { grid-template-columns: 1fr !important; }
+  }
+
+  /* 표 내려받기 (CSV·엑셀) */
+  .dl-bar { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin: 0 0 12px; }
+  .dl-btn { font-family: inherit; font-size: 13px; font-weight: 700; padding: 8px 14px; border-radius: 999px; border: 1.5px solid var(--accent, #D9542B); background: #FBF7F0; color: var(--accent, #D9542B); cursor: pointer; line-height: 1.2; }
+  .dl-btn:hover { background: var(--accent, #D9542B); color: #fff; }
+  .dl-note { font-size: 12px; color: #8B7B6B; font-weight: 600; word-break: keep-all; }
+
+  /* ===== 거래비용 계산기 추가 ===== */
+  .mode-tabs.two { grid-template-columns: repeat(2, 1fr); }
+  .seg { display: flex; flex-wrap: wrap; gap: 6px; }
+  .seg .chip { padding: 9px 14px; font-size: 13.5px; }
+  .tab-panel.is-hidden { display: none; }
+  .link-inline { color: var(--accent); font-weight: 800; text-decoration: none; }
+  .link-inline:hover { text-decoration: underline; }
+  .cost-table { min-width: 0; }
+  .cost-table td, .cost-table th { white-space: normal; }
+  .cost-table td:first-child { text-align: left; color: var(--ink); font-weight: 700; width: 38%; }
+  .cost-table th:first-child { text-align: left; }
+  .cost-table td.note { text-align: left; color: var(--ink-mute); font-weight: 500; font-size: 12.5px; }
+  .cost-table tr.total td { border-top: 1.5px solid var(--ink-soft); font-weight: 900; background: var(--bg-alt); }
+  .cost-table tr.total td:first-child { color: var(--accent); }
+  .cost-table tr.sub td:first-child { padding-left: 22px; color: var(--ink-soft); font-weight: 600; }
+  .rate-table { min-width: 0; }
+  .rate-table td, .rate-table th { white-space: normal; text-align: center; }
+  .rate-table td:first-child { color: var(--ink); text-align: left; }
+  .rate-table th:first-child { text-align: left; }
+  .freq-table { min-width: 0; }
+  .freq-table td, .freq-table th { white-space: normal; }
+  .be-box { margin-top: 16px; background: var(--bg); border: 1px solid var(--border); border-radius: 14px; padding: 16px 18px; font-size: 14px; font-weight: 600; color: var(--ink-soft); line-height: 1.7; }
+  .be-box b { color: var(--ink); }
+  .be-box .be-num { color: var(--accent); font-weight: 900; font-size: 17px; }
+  .assume-list { list-style: none; display: grid; gap: 8px; }
+  .assume-list li { font-size: 13.5px; color: var(--ink-soft); font-weight: 600; line-height: 1.6; padding-left: 16px; position: relative; }
+  .assume-list li::before { content: ''; position: absolute; left: 2px; top: 9px; width: 6px; height: 6px; border-radius: 50%; background: var(--beige-gold); }
+  .assume-title { font-size: 15px; font-weight: 800; margin: 20px 0 10px; color: var(--dark-warm); }
+  .src-list { list-style: none; display: grid; gap: 6px; margin-top: 12px; }
+  .src-list li { font-size: 12.5px; color: var(--ink-mute); font-weight: 600; line-height: 1.6; word-break: break-all; }
+  .src-list a { color: var(--brown); font-weight: 700; }
+  .src-head { font-size: 15px; font-weight: 800; margin: 22px 0 4px; letter-spacing: -0.3px; }
+  .src-head:first-of-type { margin-top: 4px; }
+  .src-note { font-size: 13px; color: var(--ink-soft); font-weight: 600; line-height: 1.65; margin-top: 10px; }
+  .btn-row { display: flex; flex-wrap: wrap; gap: 8px; }
+  .warn-line { font-size: 12.5px; color: var(--accent); font-weight: 700; margin-top: 6px; }
+  .fx-unit { margin-top: 8px; }
+  .grid-2.tight { gap: 12px; margin-bottom: 18px; }
+  .grid-2.tight .input-group { margin-bottom: 0; }
+  @media (max-width: 768px) {
+    .mode-tabs.two { grid-template-columns: 1fr 1fr; }
+    .mode-tab .mt-desc { font-size: 12px; }
+    .cost-table, .rate-table, .freq-table { font-size: 12.5px; min-width: 0 !important; }
+    .cost-table td:first-child { width: 44%; }
+    .cost-table td.note { display: none; }
+    .cost-table th.note { display: none; }
+    .btn-row { width: 100%; }
+    .btn-row .btn { flex: 1; justify-content: center; }
+    .be-box { padding: 14px; font-size: 13.5px; }
+    .grid-2.tight { grid-template-columns: 1fr 1fr !important; gap: 10px !important; }
+    .grid-2.tight .input-wrap input { padding-right: 12px; font-size: 15px; }
+    .grid-2.tight .label { font-size: 11.5px; letter-spacing: 0; }
+  }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <a href="https://ttokjaetv.github.io/" class="hub-back">← 똑재TV 계산기 모음</a>
+
+  <header>
+    <div class="logo">
+      <div class="logo-icon">똑</div>
+      <div>
+        <div class="logo-name">똑재TV</div>
+        <div class="logo-sub">TRADING COST CALCULATOR</div>
+      </div>
+    </div>
+  </header>
+
+  <div class="hero">
+    <span class="tag"><span class="dot"></span>주식 거래비용 계산기</span>
+    <h1 class="hero-title">
+      한 번 사고팔 때마다<br>
+      <span class="underline-mark">얼마가 새고</span> 있을까?
+    </h1>
+    <p class="hero-desc">
+      수수료 0.015%, 거래세 0.20%… 한 번만 보면 작은 숫자지만, 자주 사고팔면 1년에 몇 %씩 빠져나갑니다.<br>
+      수수료·증권거래세·환전비용·SEC fee를 뺀 실제 수익률과 본전 매도가를 계산해 드립니다.
+    </p>
+  </div>
+
+  <div class="top-cta">
+    <div class="top-cta-text">💡 <strong>세금·수수료 아끼는 계좌 활용법</strong>이 궁금하신가요? 똑재TV에서 매주 만나보세요.</div>
+    <div class="top-cta-links">
+      <a href="https://www.youtube.com/@ttok_jae" target="_blank" rel="noopener" class="top-cta-link primary">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>
+        똑재TV 구독하기
+      </a>
+      <a href="https://cafe.naver.com/ttokjae" target="_blank" rel="noopener" class="top-cta-link">
+        <span class="naver-mark">N</span>
+        평생 ETF 투자 카페
+      </a>
+    </div>
+  </div>
+
+  <!-- STEP 01 : 무엇을 거래하나 -->
+  <div class="card">
+    <div class="step-label"><div class="step-line"></div><span class="step-text">STEP 01 / 무엇을 사고파시나요?</span></div>
+    <h2 class="card-title">거래할 곳을 고르세요</h2>
+    <p class="card-subtitle">국내는 증권거래세, 미국은 환전비용과 SEC fee가 핵심입니다. 비용 구조가 달라서 따로 계산합니다.</p>
+    <div class="mode-tabs two" role="tablist">
+      <button class="mode-tab active" data-tab="kr" role="tab">
+        <span class="mt-num">TAB 1</span>
+        <span class="mt-title">국내주식·ETF</span>
+        <span class="mt-desc">수수료 + 증권거래세(농특세)</span>
+      </button>
+      <button class="mode-tab" data-tab="us" role="tab">
+        <span class="mt-num">TAB 2</span>
+        <span class="mt-title">미국주식</span>
+        <span class="mt-desc">수수료 + 환전 + SEC fee</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- STEP 02 : 거래 조건 -->
+  <div class="card">
+    <div class="step-label"><div class="step-line"></div><span class="step-text">STEP 02 / 거래 조건 입력</span></div>
+    <h2 class="card-title" id="step2-title">한 번의 거래를 입력하세요</h2>
+    <p class="card-subtitle" id="step2-sub">-</p>
+
+    <!-- 국내 -->
+    <div class="tab-panel" id="panel-kr">
+      <div class="input-group">
+        <span class="label">시장</span>
+        <div class="seg" id="market-chips">
+          <button class="chip on" type="button" data-m="kospi">코스피</button>
+          <button class="chip" type="button" data-m="kosdaq">코스닥</button>
+          <button class="chip" type="button" data-m="etf">ETF·ETN (거래세 면제)</button>
+        </div>
+        <div class="input-hint" id="market-hint">-</div>
+      </div>
+      <div class="grid-2" style="align-items:stretch;">
+        <div class="sub-card">
+          <div class="sub-card-title">가격과 수량</div>
+          <div class="input-group">
+            <label class="label" for="bp">매수가 (1주)</label>
+            <div class="input-wrap">
+              <input type="number" id="bp" data-unit="원" value="50000" step="any" min="0" inputmode="decimal">
+              <span class="input-currency" id="bp-display">-</span>
+            </div>
+          </div>
+          <div class="input-group">
+            <label class="label" for="sp">매도가 (1주)</label>
+            <div class="input-wrap">
+              <input type="number" id="sp" data-unit="원" value="55000" step="any" min="0" inputmode="decimal">
+              <span class="input-currency" id="sp-display">-</span>
+            </div>
+          </div>
+          <div class="input-group">
+            <label class="label" for="q">수량</label>
+            <div class="input-wrap">
+              <input type="number" id="q" data-unit="주" value="100" step="1" min="1" inputmode="numeric">
+              <span class="input-currency" id="q-display">-</span>
+            </div>
+          </div>
+          <div class="input-group">
+            <label class="label" for="d">보유 기간 (선택)</label>
+            <div class="input-wrap">
+              <input type="number" id="d" data-unit="일" value="90" step="1" min="0" inputmode="numeric">
+              <span class="input-currency" id="d-display">-</span>
+            </div>
+            <div class="chips" data-target="d">
+              <button class="chip" type="button" data-v="7">1주</button>
+              <button class="chip" type="button" data-v="30">1개월</button>
+              <button class="chip" type="button" data-v="90">3개월</button>
+              <button class="chip" type="button" data-v="365">1년</button>
+            </div>
+            <div class="input-hint">넣으면 연환산 수익률을 같이 보여드립니다 · 비우면 생략</div>
+          </div>
+        </div>
+        <div class="sub-card">
+          <div class="sub-card-title">수수료</div>
+          <div class="input-group">
+            <label class="label" for="fb">매수 수수료율</label>
+            <div class="input-wrap">
+              <input type="number" id="fb" data-unit="%" value="0.015" step="any" min="0" max="5" inputmode="decimal">
+              <span class="input-currency" id="fb-display">-</span>
+            </div>
+            <div class="chips" data-target="fb">
+              <button class="chip" type="button" data-v="0">0%</button>
+              <button class="chip" type="button" data-v="0.015">0.015%</button>
+              <button class="chip" type="button" data-v="0.1">0.1%</button>
+              <button class="chip" type="button" data-v="0.25">0.25%</button>
+            </div>
+          </div>
+          <div class="input-group">
+            <label class="label" for="fs">매도 수수료율</label>
+            <div class="input-wrap">
+              <input type="number" id="fs" data-unit="%" value="0.015" step="any" min="0" max="5" inputmode="decimal">
+              <span class="input-currency" id="fs-display">-</span>
+            </div>
+            <div class="chips" data-target="fs">
+              <button class="chip" type="button" data-v="0">0%</button>
+              <button class="chip" type="button" data-v="0.015">0.015%</button>
+              <button class="chip" type="button" data-v="0.1">0.1%</button>
+              <button class="chip" type="button" data-v="0.25">0.25%</button>
+            </div>
+          </div>
+          <div class="fixed-note" style="margin-top:4px;">수수료율은 <b>증권사·이벤트마다 다릅니다.</b> 유관기관 제비용(거래소·예탁원 등에 내는 비용)이 포함된 숫자인지도 확인해 보세요. 증권사별 실제 수수료는 <a href="https://ttokjaetv.github.io/trading-fee/" target="_blank" rel="noopener" class="link-inline">증권사 수수료 비교표</a>에 정리해 두었습니다.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 미국 -->
+    <div class="tab-panel is-hidden" id="panel-us">
+      <div class="grid-2" style="align-items:stretch;">
+        <div class="sub-card">
+          <div class="sub-card-title">가격·수량·환율</div>
+          <div class="grid-2 tight">
+            <div class="input-group">
+              <label class="label" for="ubp">매수가 (1주)</label>
+              <div class="input-wrap">
+                <input type="number" id="ubp" data-unit="달러" value="100" step="any" min="0" inputmode="decimal">
+              </div>
+            </div>
+            <div class="input-group">
+              <label class="label" for="usp">매도가 (1주)</label>
+              <div class="input-wrap">
+                <input type="number" id="usp" data-unit="달러" value="110" step="any" min="0" inputmode="decimal">
+              </div>
+            </div>
+          </div>
+          <div class="input-group">
+            <label class="label" for="uq">수량</label>
+            <div class="input-wrap">
+              <input type="number" id="uq" data-unit="주" value="20" step="1" min="1" inputmode="numeric">
+              <span class="input-currency" id="uq-display">-</span>
+            </div>
+          </div>
+          <div class="grid-2 tight">
+            <div class="input-group">
+              <label class="label" for="fxb">매수 시 환율</label>
+              <div class="input-wrap">
+                <input type="number" id="fxb" data-unit="원" value="1380" step="any" min="0" inputmode="decimal">
+              </div>
+            </div>
+            <div class="input-group">
+              <label class="label" for="fxs">매도 시 환율</label>
+              <div class="input-wrap">
+                <input type="number" id="fxs" data-unit="원" value="1400" step="any" min="0" inputmode="decimal">
+              </div>
+            </div>
+          </div>
+          <div class="input-hint" style="margin-top:2px;margin-bottom:16px;">은행·증권사 고시 <b>매매기준율</b>을 넣으세요(1달러당 원). 기본값은 예시 숫자입니다.</div>
+        </div>
+        <div class="sub-card">
+          <div class="sub-card-title">수수료·환전·SEC fee</div>
+          <div class="grid-2 tight">
+            <div class="input-group">
+              <label class="label" for="ufb">매수 수수료율</label>
+              <div class="input-wrap">
+                <input type="number" id="ufb" data-unit="%" value="0.25" step="any" min="0" max="5" inputmode="decimal">
+              </div>
+            </div>
+            <div class="input-group">
+              <label class="label" for="ufs">매도 수수료율</label>
+              <div class="input-wrap">
+                <input type="number" id="ufs" data-unit="%" value="0.25" step="any" min="0" max="5" inputmode="decimal">
+              </div>
+            </div>
+          </div>
+          <div class="input-hint" style="margin-top:2px;margin-bottom:16px;">0.25%는 예시입니다. 증권사·이벤트에 따라 0.07~0.25% 정도로 다양합니다.</div>
+          <div class="input-group">
+            <label class="label" for="fx">환전 수수료 (살 때·팔 때 각각)</label>
+            <div class="input-wrap">
+              <input type="number" id="fx" data-unit="%" value="0.1" step="any" min="0" inputmode="decimal">
+              <span class="input-currency" id="fx-display">-</span>
+            </div>
+            <div class="seg fx-unit" id="fxu-chips">
+              <button class="chip on" type="button" data-u="pct">% (환율 우대 반영)</button>
+              <button class="chip" type="button" data-u="won">1달러당 원</button>
+            </div>
+            <div class="chips" id="fx-pct-chips" data-target="fx">
+              <button class="chip" type="button" data-v="1">우대 없음 1%</button>
+              <button class="chip" type="button" data-v="0.5">우대 50%</button>
+              <button class="chip" type="button" data-v="0.1">우대 90%</button>
+              <button class="chip" type="button" data-v="0.05">우대 95%</button>
+            </div>
+            <div class="input-hint" id="fx-hint">환전 스프레드 1%에 환율 우대 90%면 0.1%입니다. 증권사 앱의 '환전 우대율'을 확인하세요.</div>
+          </div>
+          <div class="grid-2 tight">
+            <div class="input-group">
+              <label class="label" for="sec">SEC fee (100만 달러당)</label>
+              <div class="input-wrap">
+                <input type="number" id="sec" data-unit="달러" value="20.6" step="any" min="0" inputmode="decimal">
+              </div>
+            </div>
+            <div class="input-group">
+              <label class="label" for="taf">FINRA TAF (1주당)</label>
+              <div class="input-wrap">
+                <input type="number" id="taf" data-unit="달러" value="0.000195" step="any" min="0" inputmode="decimal">
+              </div>
+            </div>
+          </div>
+          <div class="input-hint" style="margin-top:2px;margin-bottom:16px;">SEC fee 기본값 <b>$20.60/100만 달러(0.00206%)</b>는 2026년 4월 4일부터 적용 중인 요율, TAF <b>$0.000195/주(거래당 최대 $9.79)</b>는 2026년 1월 1일 기준입니다(2026년 10월 확인). 요율이 자주 바뀌니 증권사 안내와 다르면 고쳐 넣으세요. 증권사가 따로 받지 않으면 0.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 공통: 연간 횟수 -->
+    <div class="sub-card" style="margin-top:20px;">
+      <div class="sub-card-title">자주 사고판다면?</div>
+      <div class="grid-2" style="align-items:start;">
+        <div class="input-group">
+          <label class="label" for="n">1년에 사고파는 횟수 (왕복)</label>
+          <div class="input-wrap">
+            <input type="number" id="n" data-unit="회" value="12" step="1" min="0" max="500" inputmode="numeric">
+            <span class="input-currency" id="n-display">-</span>
+          </div>
+          <div class="chips" data-target="n">
+            <button class="chip" type="button" data-v="1">1회</button>
+            <button class="chip" type="button" data-v="4">4회</button>
+            <button class="chip" type="button" data-v="12">12회(매달)</button>
+            <button class="chip" type="button" data-v="52">52회(매주)</button>
+          </div>
+          <div class="input-hint">이번과 같은 크기·같은 비용의 거래를 1년에 이만큼 반복한다고 봅니다</div>
+        </div>
+        <div class="input-group">
+          <label class="label" for="r">장기 비교용 기대 연 수익률</label>
+          <div class="input-wrap">
+            <input type="number" id="r" data-unit="%" value="7" step="any" min="-10" max="30" inputmode="decimal">
+            <span class="input-currency" id="r-display">-</span>
+          </div>
+          <div class="chips" data-target="r">
+            <button class="chip" type="button" data-v="5">5%</button>
+            <button class="chip" type="button" data-v="7">7%</button>
+            <button class="chip" type="button" data-v="10">10%</button>
+          </div>
+          <div class="input-hint">20년 비교 그래프에만 쓰는 가정치입니다(미래 수익 보장 아님)</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- STEP 03 : 결과 -->
+  <div class="step-label"><div class="step-line"></div><span class="step-text">STEP 03 / 결과</span></div>
+  <div class="verdict" id="verdict">
+    <div class="verdict-label" id="verdict-label">RESULT</div>
+    <div class="verdict-main" id="verdict-main">-</div>
+    <div class="verdict-sub" id="verdict-sub"></div>
+  </div>
+
+  <div class="stat-grid">
+    <div class="stat-card accent"><div class="stat-label" id="s1-label">-</div><div class="stat-value" id="s1-value">-</div><div class="stat-sub" id="s1-sub"></div></div>
+    <div class="stat-card"><div class="stat-label" id="s2-label">-</div><div class="stat-value" id="s2-value">-</div><div class="stat-sub" id="s2-sub"></div></div>
+    <div class="stat-card"><div class="stat-label" id="s3-label">-</div><div class="stat-value" id="s3-value">-</div><div class="stat-sub" id="s3-sub"></div></div>
+    <div class="stat-card accent-green"><div class="stat-label" id="s4-label">-</div><div class="stat-value" id="s4-value">-</div><div class="stat-sub" id="s4-sub"></div></div>
+  </div>
+
+  <div class="card">
+    <h3 class="chart-title" id="cost-title">비용 항목별 내역</h3>
+    <p class="chart-subtitle" id="cost-subtitle">-</p>
+    <div class="table-wrap">
+      <table class="data-table cost-table">
+        <thead><tr><th>항목</th><th>금액</th><th class="note">계산</th></tr></thead>
+        <tbody id="cost-body"></tbody>
+      </table>
+    </div>
+    <div class="be-box" id="be-box">-</div>
+    <p class="input-hint" id="us-tax-note" style="margin-top:12px;">해외주식 양도소득세(1년 동안의 해외주식 매매차익에서 250만원 공제 후 22%)는 여기 포함하지 않았습니다. 해외주식 양도세는 <a href="https://ttokjaetv.github.io/overseas-stock-tax/" target="_blank" rel="noopener" class="link-inline">해외주식 양도세 계산기</a>에서 따로 계산해 보세요.</p>
+  </div>
+
+  <div class="card">
+    <div class="step-label"><div class="step-line"></div><span class="step-text">수수료율 비교</span></div>
+    <h3 class="chart-title">같은 거래, 수수료율만 다르면?</h3>
+    <p class="chart-subtitle" id="cmp-subtitle">-</p>
+    <div class="dl-bar">
+      <button type="button" class="dl-btn" id="dl-csv">CSV 내려받기</button>
+      <button type="button" class="dl-btn" id="dl-xlsx">엑셀(.xlsx) 내려받기</button>
+      <span class="dl-note" id="dl-note">엑셀에는 비용 내역·수수료율 비교·연간 횟수별 비용 표가 함께 들어갑니다 (원 단위 숫자)</span>
+    </div>
+    <div class="table-wrap">
+      <table class="data-table">
+        <thead id="cmp-head"></thead>
+        <tbody id="cmp-body"></tbody>
+      </table>
+    </div>
+    <p class="input-hint" style="margin-top:12px;">매수·매도 수수료율을 모두 그 값으로 바꿨을 때입니다. 세금·환전 조건은 위 입력 그대로입니다.</p>
+  </div>
+
+  <div class="card">
+    <div class="step-label"><div class="step-line"></div><span class="step-text">잦은 매매의 비용</span></div>
+    <h3 class="chart-title" id="freq-title">1년에 여러 번 사고팔면?</h3>
+    <p class="chart-subtitle" id="freq-subtitle">-</p>
+    <div class="table-wrap">
+      <table class="data-table freq-table">
+        <thead id="freq-head"></thead>
+        <tbody id="freq-body"></tbody>
+      </table>
+    </div>
+    <h3 class="chart-title" style="margin-top:28px;" id="long-title">20년 뒤 자산 차이</h3>
+    <p class="chart-subtitle" id="long-subtitle">-</p>
+    <div class="chart-container"><canvas id="long-chart"></canvas></div>
+  </div>
+
+  <div class="card">
+    <div class="link-row">
+      <div>
+        <h3 class="chart-title">결과 저장·공유하기</h3>
+        <p class="chart-subtitle" style="margin-bottom:0;">결과 복사는 요약을 글자로 복사합니다(카페 댓글용). 링크 복사는 입력값이 담긴 주소라, 붙여넣으면 같은 화면이 열립니다.</p>
+      </div>
+      <div class="btn-row">
+        <button class="btn ghost" id="copy-result">결과 복사</button>
+        <button class="btn" id="copy-link">링크 복사</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="insight-box">
+    <div class="insight-label">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#D9542B" stroke-width="2"><path d="M12 3l1.9 5.8L20 10l-4.5 3.3L17 20l-5-3.5L7 20l1.5-6.7L4 10l6.1-1.2L12 3z"/></svg>
+      <span class="insight-label-text">KEY INSIGHT</span>
+    </div>
+    <h3 class="insight-title" id="insight-title">-</h3>
+    <p class="insight-desc" id="insight-desc">-</p>
+    <div class="insight-cta">
+      <div class="insight-cta-text">📊 비용을 줄이는 가장 쉬운 방법은 덜 사고파는 것, 그다음이 수수료 싼 곳을 고르는 것입니다.</div>
+      <a href="https://www.youtube.com/@ttok_jae" target="_blank" rel="noopener" class="cta-link primary">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>
+        똑재TV 구독하기
+      </a>
+      <a href="https://cafe.naver.com/ttokjae" target="_blank" rel="noopener" class="cta-link secondary">
+        <span class="naver-mark">N</span>
+        평생 ETF 투자 카페 가입
+      </a>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="step-label"><div class="step-line"></div><span class="step-text">근거</span></div>
+    <h3 class="chart-title">이 계산기에 넣은 세율·요율 (2026년 10월 확인)</h3>
+    <p class="chart-subtitle" style="margin-bottom:8px;">세율과 요율은 바뀔 수 있습니다. 실제 거래 전에는 증권사 안내를 한 번 더 확인해 주세요.</p>
+
+    <div class="src-head">국내 증권거래세 — 2026년 1월 1일 양도분부터</div>
+    <div class="table-wrap">
+      <table class="data-table rate-table">
+        <thead><tr><th>시장</th><th>증권거래세</th><th>농어촌특별세</th><th>매도 시 합계</th></tr></thead>
+        <tbody>
+          <tr><td>코스피</td><td>0.05%</td><td>0.15%</td><td class="c-accent">0.20%</td></tr>
+          <tr><td>코스닥</td><td>0.20%</td><td>없음</td><td class="c-accent">0.20%</td></tr>
+          <tr><td>코넥스</td><td>0.10%</td><td>없음</td><td class="c-accent">0.10%</td></tr>
+          <tr><td>K-OTC</td><td>0.20%</td><td>없음</td><td class="c-accent">0.20%</td></tr>
+          <tr><td>ETF·ETN·ELW</td><td>없음</td><td>없음</td><td class="c-green">0%</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="src-note">2025년에는 코스피 0%(농특세 0.15%만), 코스닥·K-OTC 0.15%였습니다. 2025년 세법 개정으로 <b>2026년부터 0.05%p씩 올라</b> 2023년 수준으로 돌아갔고, 코넥스는 0.10% 그대로입니다. 세금은 <b>팔 때만</b> 매도금액에 붙습니다. ETF·ETN·ELW는 팔 때 증권거래세가 없습니다(분배금·매매차익에 붙는 배당소득세 등은 별개).</p>
+    <ul class="src-list">
+      <li>한국세정신문, 2025-12-01 — "코스피 증권거래세율은 현재 0%에서 0.05%로… 코스닥·K-OTC(농특세 없음)은 0.15%에서 0.20%로… 적용시기는 내년 1월 1일 이후 양도분부터" <a href="https://www.taxtimes.co.kr/news/article.html?no=272624" target="_blank" rel="noopener">기사 보기</a></li>
+      <li>세계일보 「2026년 달라지는 세법」, 2026-01-05 — 코스피 0.20%(농특세 0.15% 포함), 코스닥·K-OTC 0.20%, 코넥스 0.10% <a href="https://www.segye.com/newsView/20260105516769" target="_blank" rel="noopener">기사 보기</a></li>
+      <li>ETF: "ETF를 팔 때는 증권거래세가 부과되지 않아요" — 토스피드(2024-03 업데이트) <a href="https://toss.im/tossfeed/article/etf-and-tax" target="_blank" rel="noopener">보기</a> · ETN: "증권거래세: 비과세" — 키움증권 ETN 안내 <a href="https://download.kiwoom.com/hero4_help_new/0718.htm" target="_blank" rel="noopener">보기</a> · ELW: "거래세: 없음" — 키움증권 ELW 거래제도 <a href="https://www.kiwoom.com/h/domestic/stock/VElwMainView" target="_blank" rel="noopener">보기</a></li>
+    </ul>
+
+    <div class="src-head">호가가격단위 — 본전 매도가 올림에 사용</div>
+    <div class="table-wrap">
+      <table class="data-table rate-table">
+        <thead><tr><th>주가(주식)</th><th>호가 단위</th><th>주가(주식)</th><th>호가 단위</th></tr></thead>
+        <tbody>
+          <tr><td>2,000원 미만</td><td>1원</td><td>5만~20만원 미만</td><td>100원</td></tr>
+          <tr><td>2,000~5,000원 미만</td><td>5원</td><td>20만~50만원 미만</td><td>500원</td></tr>
+          <tr><td>5,000~2만원 미만</td><td>10원</td><td>50만원 이상</td><td>1,000원</td></tr>
+          <tr><td>2만~5만원 미만</td><td>50원</td><td>ETF·ETN</td><td>2,000원 미만 1원 · 이상 5원</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="src-note">2023년 1월 25일부터 코스피·코스닥·코넥스 주식에 같은 호가 단위가 적용됩니다. 미국주식은 1달러 이상이면 1센트 단위로 올립니다.</p>
+    <ul class="src-list">
+      <li>한국거래소 호가가격단위 개편(2022-11-01 발표, 2023-01-25 시행) — 머니투데이방송 <a href="https://news.mtn.co.kr/news-detail/2022110114103274390" target="_blank" rel="noopener">기사 보기</a> · 구간표 정리 <a href="https://wikidocs.net/165194" target="_blank" rel="noopener">위키독스</a></li>
+      <li>ETF: "현재 2000원 미만 ETF에는 1원 단위 호가가 적용" — 머니투데이방송, 2026-07-09 <a href="https://news.mtn.co.kr/news-detail/2026070916330218121" target="_blank" rel="noopener">기사 보기</a></li>
+    </ul>
+
+    <div class="src-head">미국주식 매도 시 붙는 규제 수수료</div>
+    <div class="table-wrap">
+      <table class="data-table rate-table">
+        <thead><tr><th>항목</th><th>요율</th><th>적용 시점</th></tr></thead>
+        <tbody>
+          <tr><td>SEC fee (Section 31)</td><td>매도금액 100만 달러당 $20.60 (0.00206%)</td><td>2026-04-04 체결분부터 (직전 $0.00)</td></tr>
+          <tr><td>FINRA TAF</td><td>매도 1주당 $0.000195, 거래당 최대 $9.79</td><td>2026-01-01부터 (2027-01-01부터 $0.000232·최대 $11.61 예정)</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="src-note">둘 다 <b>팔 때만</b> 붙습니다. SEC fee 요율은 미국 증권거래위원회가 1년에 한두 번 바꾸고, 국내 증권사가 TAF를 따로 받는지는 증권사마다 다를 수 있어 입력칸으로 두었습니다.</p>
+    <ul class="src-list">
+      <li>SEC Fee Rate Advisory 2026-2 (2026-02-27 발표) — "$20.60 per million dollars… charge dates on or after April 4, 2026" <a href="https://www.sec.gov/rules-regulations/fee-rate-advisories/2026-2" target="_blank" rel="noopener">SEC 보기</a></li>
+      <li>FINRA SR-FINRA-2024-019 Fee Adjustment Schedule — TAF(covered equity) 2026년 $0.000195/주, 최대 $9.79 <a href="https://www.finra.org/rules-guidance/rule-filings/sr-finra-2024-019/fee-adjustment-schedule" target="_blank" rel="noopener">FINRA 보기</a></li>
+    </ul>
+  </div>
+
+  <div class="card">
+    <div class="step-label"><div class="step-line"></div><span class="step-text">계산 방법과 가정</span></div>
+    <h3 class="chart-title">이렇게 계산했습니다</h3>
+    <ul class="assume-list" style="margin-top:12px;">
+      <li><b>수수료</b> = 매수금액(또는 매도금액) × 수수료율. 국내는 원 미만을 버리고, 미국은 센트 단위로 반올림했습니다.</li>
+      <li><b>증권거래세·농특세</b> = 매도금액 × 세율(원 미만 버림). 코스피는 거래세 0.05%와 농특세 0.15%를 따로 계산해 더합니다.</li>
+      <li><b>실제 수익률</b> = 비용 차감 손익 ÷ 실제로 들어간 돈(국내: 매수금액 + 매수 수수료 / 미국: 환전 비용까지 포함한 원화 투입액).</li>
+      <li><b>연환산 수익률</b> = (1 + 실제 수익률)^(365 ÷ 보유일) − 1. 보유 기간이 짧으면 숫자가 크게 부풀려 보이니 참고만 하세요.</li>
+      <li><b>본전 매도가</b> = 수수료와 세금(미국은 환전·SEC fee·TAF까지)을 다 내고도 손실이 0원 이상이 되는 가장 낮은 매도가. 국내는 호가 단위로 올림, 미국은 매도 환율을 입력값 그대로 둔 1센트 단위 올림입니다.</li>
+      <li><b>미국 원화 손익</b> = 원화로 받은 돈 − 원화로 낸 돈. 그중 <b>주가 손익</b> = 달러 손익 × 매도 환율, <b>환차손익</b> = 매수금액(달러) × (매도 환율 − 매수 환율)로 나눴고, 나머지가 비용입니다.</li>
+      <li><b>환전 수수료</b>: % 입력이면 살 때 매매기준율 × (1 + 수수료율), 팔 때 × (1 − 수수료율)로 환전한다고 봤습니다. SEC fee·TAF는 센트 단위 올림, TAF는 최소 $0.01·최대 $9.79(입력값 기준 최대치는 2026년 요율 고정)입니다.</li>
+      <li><b>연간 비용</b> = 이번 거래 1회 왕복 비용 × 1년 횟수(투자금 대비 %는 단순 합). 20년 그래프는 매년 (1 + 기대 수익률) × (1 − 1회 비용률)^횟수로 굴렸습니다.</li>
+    </ul>
+    <div class="assume-title">계산에 넣지 않은 것</div>
+    <ul class="assume-list">
+      <li>매매차익·분배금에 붙는 세금 — 국내 대주주 양도소득세, 국내상장 해외 ETF 매매차익의 배당소득세(15.4%), 해외주식 양도소득세(250만원 공제 후 22%), 금융소득종합과세</li>
+      <li>증권사별 최소 수수료·정액 수수료, 유관기관 제비용이 수수료율과 별도인 경우의 추가분</li>
+      <li>사고팔 때 호가 차이로 생기는 체결 손해(스프레드·슬리피지), 미국주식 환전 시점 차이</li>
+      <li>ISA·연금저축·IRP 등 절세 계좌의 세금 혜택, ADR 수수료 등 종목별 특수 비용</li>
+    </ul>
+    <p class="input-hint" style="margin-top:14px;">더 싸게 사고팔 곳을 찾는다면 <a href="https://ttokjaetv.github.io/trading-fee/" target="_blank" rel="noopener" class="link-inline">증권사 수수료 비교표</a>를, 떨어진 종목을 더 살지 고민이라면 <a href="https://ttokjaetv.github.io/Water-Calc/" target="_blank" rel="noopener" class="link-inline">하락장 물타기 계산기</a>를 같이 보세요.</p>
+  </div>
+
+  <footer>
+    ※ 본 계산기는 참고용 단순 계산 도구입니다. 실제 수수료·세금·환율은 증권사와 거래 시점에 따라 달라 실제 결과와 다를 수 있습니다.<br>
+    특정 종목·상품의 매수·매도 권유가 아니며, 투자 판단과 책임은 본인에게 있습니다.<br>
+    🔒 입력한 숫자는 이 브라우저 안에서만 계산되며, 서버로 보내거나 따로 저장하지 않습니다.
+  </footer>
+</div>
+
+<script>
+// ============== 표 내려받기 (CSV · 엑셀 .xlsx) — 외부 라이브러리 없이 동작 ==============
+// TJX.csv('파일이름', rows) · TJX.xlsx('파일이름', [{ name: '시트', rows, widths }])
+// rows = [[머리글...], [값...], ...]  숫자는 숫자 그대로 넣으면 엑셀에서 계산 가능한 숫자 칸이 됩니다
+const TJX = (() => {
+  const enc = new TextEncoder();
+  function csvText(rows) {
+    return '﻿' + rows.map(r => r.map(v => {
+      if (v == null) return '';
+      if (typeof v === 'number') return isFinite(v) ? String(Math.round(v * 100) / 100) : '';
+      const t = String(v);
+      return /[",\r\n]/.test(t) ? '"' + t.replace(/"/g, '""') + '"' : t;
+    }).join(',')).join('\r\n');
+  }
+  const CRC = (() => { const t = new Uint32Array(256); for (let n = 0; n < 256; n++) { let c = n; for (let k = 0; k < 8; k++) c = c & 1 ? 0xEDB88320 ^ (c >>> 1) : c >>> 1; t[n] = c >>> 0; } return t; })();
+  function crc32(b) { let c = 0xFFFFFFFF; for (let i = 0; i < b.length; i++) c = CRC[(c ^ b[i]) & 255] ^ (c >>> 8); return (c ^ 0xFFFFFFFF) >>> 0; }
+  function zipStore(files) {   // 압축 없이 묶기 (엑셀은 이 형식도 그대로 엽니다)
+    const parts = [], central = []; let off = 0;
+    for (const f of files) {
+      const nm = enc.encode(f.name), d = enc.encode(f.text), c = crc32(d);
+      const lh = new DataView(new ArrayBuffer(30));
+      lh.setUint32(0, 0x04034b50, true); lh.setUint16(4, 20, true); lh.setUint16(6, 0x0800, true);
+      lh.setUint16(12, 0x21, true); lh.setUint32(14, c, true); lh.setUint32(18, d.length, true); lh.setUint32(22, d.length, true);
+      lh.setUint16(26, nm.length, true);
+      parts.push(new Uint8Array(lh.buffer), nm, d);
+      const ch = new DataView(new ArrayBuffer(46));
+      ch.setUint32(0, 0x02014b50, true); ch.setUint16(4, 20, true); ch.setUint16(6, 20, true); ch.setUint16(8, 0x0800, true);
+      ch.setUint16(14, 0x21, true); ch.setUint32(16, c, true); ch.setUint32(20, d.length, true); ch.setUint32(24, d.length, true);
+      ch.setUint16(28, nm.length, true); ch.setUint32(42, off, true);
+      central.push(new Uint8Array(ch.buffer), nm);
+      off += 30 + nm.length + d.length;
+    }
+    const cs = central.reduce((s, a) => s + a.length, 0);
+    const end = new DataView(new ArrayBuffer(22));
+    end.setUint32(0, 0x06054b50, true); end.setUint16(8, files.length, true); end.setUint16(10, files.length, true);
+    end.setUint32(12, cs, true); end.setUint32(16, off, true);
+    return new Blob([...parts, ...central, new Uint8Array(end.buffer)], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+  }
+  const esc = t => String(t).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  const colName = i => { let s = ''; i++; while (i > 0) { const m = (i - 1) % 26; s = String.fromCharCode(65 + m) + s; i = Math.floor((i - 1) / 26); } return s; };
+  function sheetXml(sh) {
+    const rows = sh.rows || [];
+    const nCol = rows.reduce((m, r) => Math.max(m, r.length), 1);
+    const widths = sh.widths || [];
+    const cols = Array.from({ length: nCol }, (_, i) => `<col min="${i + 1}" max="${i + 1}" width="${widths[i] || (i === 0 ? 12 : 16)}" customWidth="1"/>`).join('');
+    const body = rows.map((r, ri) => `<row r="${ri + 1}">` + r.map((v, ci) => {
+      const ref = colName(ci) + (ri + 1);
+      if (v == null || v === '') return '';
+      if (typeof v === 'number' && isFinite(v)) {
+        const st = ri === 0 ? 2 : (Math.abs(v - Math.round(v)) < 1e-9 ? 1 : 3);
+        return `<c r="${ref}" s="${st}"><v>${Math.round(v * 10000) / 10000}</v></c>`;
+      }
+      return `<c r="${ref}" t="inlineStr"${ri === 0 ? ' s="2"' : ''}><is><t xml:space="preserve">${esc(v)}</t></is></c>`;
+    }).join('') + '</row>').join('');
+    return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetViews><sheetView workbookViewId="0"><pane ySplit="1" topLeftCell="A2" activePane="bottomLeft" state="frozen"/></sheetView></sheetViews><cols>${cols}</cols><sheetData>${body}</sheetData></worksheet>`;
+  }
+  function xlsxBlob(sheets) {
+    const W = 'http://schemas.openxmlformats.org';
+    const files = [
+      { name: '[Content_Types].xml', text: `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="${W}/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/>${sheets.map((s, i) => `<Override PartName="/xl/worksheets/sheet${i + 1}.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>`).join('')}</Types>` },
+      { name: '_rels/.rels', text: `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="${W}/package/2006/relationships"><Relationship Id="rId1" Type="${W}/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>` },
+      { name: 'xl/workbook.xml', text: `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><workbook xmlns="${W}/spreadsheetml/2006/main" xmlns:r="${W}/officeDocument/2006/relationships"><sheets>${sheets.map((s, i) => `<sheet name="${esc(String(s.name || 'Sheet' + (i + 1)).replace(/[\\\/\?\*\[\]:]/g, ' ').slice(0, 31))}" sheetId="${i + 1}" r:id="rId${i + 1}"/>`).join('')}</sheets></workbook>` },
+      { name: 'xl/_rels/workbook.xml.rels', text: `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="${W}/package/2006/relationships">${sheets.map((s, i) => `<Relationship Id="rId${i + 1}" Type="${W}/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet${i + 1}.xml"/>`).join('')}<Relationship Id="rId${sheets.length + 1}" Type="${W}/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>` },
+      { name: 'xl/styles.xml', text: `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><styleSheet xmlns="${W}/spreadsheetml/2006/main"><fonts count="2"><font><sz val="11"/><name val="맑은 고딕"/></font><font><b/><sz val="11"/><name val="맑은 고딕"/></font></fonts><fills count="2"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill></fills><borders count="1"><border><left/><right/><top/><bottom/><diagonal/></border></borders><cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs><cellXfs count="4"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/><xf numFmtId="3" fontId="0" fillId="0" borderId="0" xfId="0" applyNumberFormat="1"/><xf numFmtId="0" fontId="1" fillId="0" borderId="0" xfId="0" applyFont="1"/><xf numFmtId="4" fontId="0" fillId="0" borderId="0" xfId="0" applyNumberFormat="1"/></cellXfs><cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles></styleSheet>` },
+      ...sheets.map((s, i) => ({ name: `xl/worksheets/sheet${i + 1}.xml`, text: sheetXml(s) })),
+    ];
+    return zipStore(files);
+  }
+  function save(blob, name) {
+    const a = document.createElement('a'), u = URL.createObjectURL(blob);
+    a.href = u; a.download = name; document.body.appendChild(a); a.click();
+    setTimeout(() => { URL.revokeObjectURL(u); a.remove(); }, 1500);
+  }
+  const stamp = () => { const d = new Date(); return `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}`; };
+  return {
+    csvText, xlsxBlob,
+    csv(name, rows) { save(new Blob([csvText(rows)], { type: 'text/csv;charset=utf-8' }), `${name}_${stamp()}.csv`); },
+    xlsx(name, sheets) { save(xlsxBlob(sheets), `${name}_${stamp()}.xlsx`); },
+  };
+})();
+
+// ============== 기준 수치 (2026년 10월 확인) ==============
+const KR_TAX = {   // 2026-01-01 양도분부터
+  kospi:  { stt: 0.0005, rural: 0.0015, label: '코스피' },
+  kosdaq: { stt: 0.0020, rural: 0,      label: '코스닥' },
+  etf:    { stt: 0,      rural: 0,      label: 'ETF·ETN' },
+};
+const TAF_MAX = 9.79;          // FINRA TAF 거래당 최대 (2026-01-01~)
+const CMP_RATES = [0.015, 0.1, 0.25];
+const FREQS = [1, 4, 12, 24, 52];
+const YEARS = 20;
+const DEF = {
+  tab: 'kr', m: 'kospi', bp: 50000, sp: 55000, q: 100, d: 90, fb: 0.015, fs: 0.015,
+  ubp: 100, usp: 110, uq: 20, fxb: 1380, fxs: 1400, ufb: 0.25, ufs: 0.25, fxu: 'pct', fx: 0.1, sec: 20.6, taf: 0.000195,
+  n: 12, r: 7,
+};
+let TAB = 'kr', MARKET = 'kospi', FXU = 'pct';
+let longChart = null, lastExport = null, lastCopy = '';
+
+// ============== 포맷 ==============
+function formatKRW(n) {
+  const neg = n < 0; n = Math.abs(n);
+  let s;
+  if (n >= 100000000) {
+    const eok = n / 100000000;
+    s = (eok >= 100 ? Math.round(eok).toLocaleString() : eok.toFixed(2)) + '억';
+  } else if (n >= 10000) s = Math.round(n / 10000).toLocaleString() + '만';
+  else s = Math.round(n).toLocaleString();
+  return (neg ? '-' : '') + s;
+}
+const won = n => (n < 0 ? '-' : '') + Math.round(Math.abs(n)).toLocaleString() + '원';
+const wonS = n => (n > 0 ? '+' : '') + won(n);
+const usd = (n, d = 2) => (n < 0 ? '-$' : '$') + Math.abs(n).toLocaleString('en-US', { minimumFractionDigits: d, maximumFractionDigits: d });
+const usdS = n => (n > 0 ? '+' : '') + usd(n);
+const usdPrice = n => usd(n, n < 1 ? 4 : 2);
+const pctS = (v, d = 2) => (v > 0 ? '+' : '') + (v * 100).toFixed(d) + '%';
+const pctN = (v, d = 2) => (v * 100).toFixed(d) + '%';
+const rateTxt = v => { const s = String(Math.round(v * 100000) / 100000); return s + '%'; };   // 0.015 → 0.015%
+function annTxt(a) {
+  if (a === null || !isFinite(a)) return '-';
+  if (a > 10) return '+1,000% 초과';
+  return pctS(a, 1);
+}
+const r2 = x => Math.round(x * 100) / 100;
+const ceilCent = x => Math.ceil(x * 100 - 1e-7) / 100;
+
+// ============== 입력 읽기 ==============
+function num(id, d) { const v = parseFloat(document.getElementById(id).value); return isFinite(v) ? v : d; }
+function readInputs() {
+  const dRaw = document.getElementById('d').value.trim();
+  return {
+    tab: TAB, m: MARKET,
+    bp: Math.max(0, num('bp', 0)), sp: Math.max(0, num('sp', 0)), q: Math.max(0, Math.floor(num('q', 0))),
+    d: dRaw === '' ? null : Math.max(0, Math.round(num('d', 0))),
+    fb: Math.max(0, Math.min(5, num('fb', 0))), fs: Math.max(0, Math.min(5, num('fs', 0))),
+    ubp: Math.max(0, num('ubp', 0)), usp: Math.max(0, num('usp', 0)), uq: Math.max(0, Math.floor(num('uq', 0))),
+    fxb: Math.max(0, num('fxb', 0)), fxs: Math.max(0, num('fxs', 0)),
+    ufb: Math.max(0, Math.min(5, num('ufb', 0))), ufs: Math.max(0, Math.min(5, num('ufs', 0))),
+    fxu: FXU, fx: Math.max(0, num('fx', 0)),
+    sec: Math.max(0, num('sec', 0)), taf: Math.max(0, num('taf', 0)),
+    n: Math.max(0, Math.min(500, Math.round(num('n', 0)))),
+    r: Math.max(-10, Math.min(30, num('r', 7))),
+  };
+}
+
+// ============== 국내 계산 ==============
+// 2023-01-25~ 코스피·코스닥·코넥스 통합 호가가격단위 / ETF·ETN: 2,000원 미만 1원, 이상 5원
+function krTick(p, m) {
+  if (m === 'etf') return p < 2000 ? 1 : 5;
+  if (p < 2000) return 1;
+  if (p < 5000) return 5;
+  if (p < 20000) return 10;
+  if (p < 50000) return 50;
+  if (p < 200000) return 100;
+  if (p < 500000) return 500;
+  return 1000;
+}
+function krCalc(i, over = {}) {
+  const x = { ...i, ...over };
+  const t = KR_TAX[x.m];
+  const buyAmt = x.bp * x.q, sellAmt = x.sp * x.q;
+  const buyFee = Math.floor(buyAmt * x.fb / 100 + 1e-9);
+  const sellFee = Math.floor(sellAmt * x.fs / 100 + 1e-9);
+  const stt = Math.floor(sellAmt * t.stt + 1e-9);
+  const rural = Math.floor(sellAmt * t.rural + 1e-9);
+  const tax = stt + rural;
+  const cost = buyFee + sellFee + tax;
+  const gross = sellAmt - buyAmt;
+  const net = gross - cost;
+  const invest = buyAmt + buyFee;
+  const ret = invest > 0 ? net / invest : 0;
+  const ann = x.d && x.d > 0 && ret > -1 ? Math.pow(1 + ret, 365 / x.d) - 1 : null;
+  const c1 = buyAmt > 0 ? cost / buyAmt : 0;     // 1회 왕복 비용률 (매수금액 대비)
+  return { x, t, buyAmt, sellAmt, buyFee, sellFee, stt, rural, tax, cost, gross, net, invest, ret, ann, c1 };
+}
+function krBreakeven(i, over = {}) {
+  const x = { ...i, ...over };
+  const t = KR_TAX[x.m];
+  const invest = x.bp * x.q + Math.floor(x.bp * x.q * x.fb / 100 + 1e-9);
+  const k = 1 - x.fs / 100 - t.stt - t.rural;
+  if (x.q <= 0 || k <= 0) return null;
+  const raw = invest / (x.q * k);                 // 호가 단위 미반영 정확값
+  const netAt = p => krCalc(x, { sp: p }).net;
+  let p = Math.ceil(raw / krTick(raw, x.m) - 1e-9) * krTick(raw, x.m);
+  for (let g = 0; g < 50; g++) {                  // 원 미만 버림 때문에 한 칸 아래도 되는지 확인
+    const down = p - krTick(p - 0.5, x.m);
+    if (down > 0 && netAt(down) >= 0) p = down; else break;
+  }
+  for (let g = 0; g < 200 && netAt(p) < 0; g++) p += krTick(p, x.m);
+  return { raw, price: p, tick: krTick(p, x.m) };
+}
+
+// ============== 미국 계산 ==============
+function usCalc(i, over = {}) {
+  const x = { ...i, ...over };
+  const buyAmt = x.ubp * x.uq, sellAmt = x.usp * x.uq;
+  const buyFee = r2(buyAmt * x.ufb / 100), sellFee = r2(sellAmt * x.ufs / 100);
+  const sec = x.sec > 0 && sellAmt > 0 ? ceilCent(sellAmt * x.sec / 1e6) : 0;
+  const taf = x.taf > 0 && x.uq > 0 && sellAmt > 0 ? Math.min(TAF_MAX, Math.max(0.01, ceilCent(x.uq * x.taf))) : 0;
+  const usdOut = buyAmt + buyFee;
+  const usdIn = sellAmt - sellFee - sec - taf;
+  const pct = x.fxu === 'pct';
+  const effB = pct ? x.fxb * (1 + x.fx / 100) : x.fxb + x.fx;
+  const effS = pct ? x.fxs * (1 - x.fx / 100) : x.fxs - x.fx;
+  const krwOut = usdOut * effB;
+  const krwIn = usdIn * effS;
+  const fxCostB = krwOut - usdOut * x.fxb;
+  const fxCostS = usdIn * x.fxs - krwIn;
+  const krwPL = krwIn - krwOut;
+  const stockPL = (sellAmt - buyAmt) * x.fxs;      // 주가 손익 (매도 환율로 환산)
+  const fxPL = buyAmt * (x.fxs - x.fxb);           // 환차손익 (매수 원금 기준)
+  const c = { buyFee: buyFee * x.fxb, sellFee: sellFee * x.fxs, sec: sec * x.fxs, taf: taf * x.fxs, fxB: fxCostB, fxS: fxCostS };
+  const cost = c.buyFee + c.sellFee + c.sec + c.taf + c.fxB + c.fxS;
+  const usdGross = sellAmt - buyAmt, usdNet = usdIn - usdOut;
+  const ret = krwOut > 0 ? krwPL / krwOut : 0;
+  const c1 = krwOut > 0 ? cost / krwOut : 0;
+  return { x, buyAmt, sellAmt, buyFee, sellFee, sec, taf, usdOut, usdIn, effB, effS, krwOut, krwIn, krwPL, stockPL, fxPL, c, cost, usdGross, usdNet, ret, c1 };
+}
+function usBreakeven(i, over = {}) {
+  const x = { ...i, ...over };
+  const base = usCalc(x);
+  const k = 1 - x.ufs / 100 - x.sec / 1e6;
+  if (x.uq <= 0 || k <= 0 || base.effS <= 0) return null;
+  const tafGuess = x.taf > 0 ? Math.min(TAF_MAX, Math.max(0.01, ceilCent(x.uq * x.taf))) : 0;
+  const raw = (base.krwOut / base.effS + tafGuess) / (x.uq * k);
+  const step = raw < 1 ? 0.0001 : 0.01;
+  const netAt = p => usCalc(x, { usp: p }).krwPL;
+  let p = Math.ceil(raw / step - 1e-7) * step;
+  for (let g = 0; g < 50 && p - step > 0 && netAt(p - step) >= 0; g++) p -= step;
+  for (let g = 0; g < 500 && netAt(p) < 0; g++) p += step;
+  p = Math.round(p / step) * step;
+  // 주가 그대로(매도가 = 매수가)일 때 본전 환율
+  const flat = usCalc(x, { usp: x.ubp });
+  let fxBE = null;
+  if (flat.usdIn > 0) fxBE = x.fxu === 'pct' ? base.krwOut / (flat.usdIn * (1 - x.fx / 100)) : base.krwOut / flat.usdIn + x.fx;
+  return { raw, price: p, fxBE };
+}
+
+// ============== 렌더 ==============
+function setStat(i, label, value, sub) {
+  document.getElementById('s' + i + '-label').textContent = label;
+  document.getElementById('s' + i + '-value').textContent = value;
+  document.getElementById('s' + i + '-sub').innerHTML = sub || '';
+}
+function invalid(msg) {
+  document.getElementById('verdict-label').textContent = 'RESULT';
+  document.getElementById('verdict-main').textContent = msg;
+  document.getElementById('verdict-sub').textContent = '';
+  [1, 2, 3, 4].forEach(k => setStat(k, '-', '-', ''));
+  ['cost-body', 'cmp-body', 'freq-body'].forEach(id => { document.getElementById(id).innerHTML = ''; });
+  document.getElementById('be-box').textContent = '-';
+  lastExport = null; lastCopy = '';
+  if (longChart) { longChart.destroy(); longChart = null; }
+}
+const row = (label, amt, note, cls) => `<tr${cls ? ` class="${cls}"` : ''}><td>${label}</td><td>${amt}</td><td class="note">${note || ''}</td></tr>`;
+
+function render() {
+  const inp = readInputs();
+  if (TAB === 'kr') {
+    if (!(inp.bp > 0 && inp.sp > 0 && inp.q >= 1)) return invalid('매수가·매도가·수량을 입력해 주세요');
+    renderKR(inp);
+  } else {
+    if (!(inp.ubp > 0 && inp.usp > 0 && inp.uq >= 1 && inp.fxb > 0 && inp.fxs > 0)) return invalid('매수가·매도가·수량·환율을 입력해 주세요');
+    renderUS(inp);
+  }
+  syncUrl(inp);
+}
+
+function renderKR(inp) {
+  const R = krCalc(inp);
+  const be = krBreakeven(inp);
+  const t = R.t;
+  const etf = inp.m === 'etf';
+  const annualPct = R.c1 * inp.n;
+  document.getElementById('verdict-label').textContent = `국내 · ${t.label}`;
+  document.getElementById('verdict-main').innerHTML = `한 번 사고파는 데 <span class="hl">${won(R.cost)}</span>이 나갑니다`;
+  document.getElementById('verdict-sub').innerHTML =
+    `매수금액 ${won(R.buyAmt)}의 <strong>${pctN(R.c1, 3)}</strong>입니다. 세전 손익 ${wonS(R.gross)} 중 비용을 빼면 <strong>${wonS(R.net)}</strong>, 실제 수익률은 <strong>${pctS(R.ret)}</strong>입니다.` +
+    (inp.n > 0 ? ` 이런 거래를 1년에 ${inp.n}번 하면 비용만 약 <strong>${won(R.cost * inp.n)}</strong>(투자금의 ${pctN(annualPct)})입니다.` : '');
+
+  setStat(1, '총 거래비용', won(R.cost), `수수료 ${won(R.buyFee + R.sellFee)} + 세금 ${won(R.tax)}`);
+  setStat(2, '비용 차감 손익', wonS(R.net), `세전 손익 ${wonS(R.gross)}`);
+  setStat(3, '실제 수익률', pctS(R.ret), R.ann !== null ? `연환산 ${annTxt(R.ann)} (보유 ${inp.d}일)` : '보유 기간을 넣으면 연환산');
+  if (be) {
+    const up = be.price / inp.bp - 1;
+    setStat(4, '본전 매도가', won(be.price), `매수가보다 ${pctS(up)} 올라야 본전 · 호가 ${won(be.tick)} 단위`);
+  } else setStat(4, '본전 매도가', '-', '');
+
+  // 비용 내역 표
+  document.getElementById('cost-title').textContent = '비용 항목별 내역';
+  document.getElementById('cost-subtitle').textContent = `${t.label} · ${inp.bp.toLocaleString()}원에 ${inp.q.toLocaleString()}주 사서 ${inp.sp.toLocaleString()}원에 팔 때`;
+  let html = '';
+  html += row('매수금액', won(R.buyAmt), `${inp.bp.toLocaleString()}원 × ${inp.q.toLocaleString()}주`);
+  html += row('매도금액', won(R.sellAmt), `${inp.sp.toLocaleString()}원 × ${inp.q.toLocaleString()}주`);
+  html += row('매수 수수료', won(R.buyFee), `매수금액 × ${rateTxt(inp.fb)}`);
+  html += row('매도 수수료', won(R.sellFee), `매도금액 × ${rateTxt(inp.fs)}`);
+  if (etf) html += row('증권거래세', '0원', 'ETF·ETN은 팔 때 증권거래세 없음');
+  else if (inp.m === 'kospi') {
+    html += row('증권거래세 + 농특세', won(R.tax), '매도금액 × 0.20%');
+    html += row('└ 증권거래세', won(R.stt), '매도금액 × 0.05%', 'sub');
+    html += row('└ 농어촌특별세', won(R.rural), '매도금액 × 0.15%', 'sub');
+  } else html += row('증권거래세', won(R.tax), '매도금액 × 0.20% (농특세 없음)');
+  html += row('총 거래비용', won(R.cost), `매수금액의 ${pctN(R.c1, 3)}`, 'total');
+  html += row('세전 손익', wonS(R.gross), '매도금액 − 매수금액');
+  html += row('비용 차감 손익', wonS(R.net), '세전 손익 − 총 거래비용', 'total');
+  html += row('실제 수익률', pctS(R.ret), `비용 차감 손익 ÷ ${won(R.invest)}(매수금액+매수 수수료)`);
+  if (R.ann !== null) html += row('연환산 수익률', annTxt(R.ann), `보유 ${inp.d}일 기준 복리 환산${inp.d < 30 ? ' · 짧은 기간은 크게 부풀려 보입니다' : ''}`);
+  document.getElementById('cost-body').innerHTML = html;
+
+  document.getElementById('be-box').innerHTML = be
+    ? `<b>본전 매도가</b> <span class="be-num">${won(be.price)}</span> — 이 가격 이상에 팔아야 수수료와 세금을 다 내고도 손해가 없습니다. 비용만 정확히 메우는 가격은 ${be.raw.toLocaleString(undefined, { maximumFractionDigits: 1 })}원이고, ${etf ? 'ETF·ETN 호가 단위(2,000원 미만 1원·이상 5원)' : '2023년 통합 호가가격단위'}로 올렸습니다. 사자마자 팔면 <b>${won(R.cost - (R.sellAmt - R.buyAmt) + krCalc(inp, { sp: inp.bp }).cost - R.cost + (R.sellAmt - R.buyAmt) - (R.sellAmt - R.buyAmt))}</b> 손해로 시작하는 셈입니다.`
+    : '-';
+  document.getElementById('us-tax-note').style.display = 'none';
+
+  // 수수료율 비교
+  const rates = CMP_RATES.includes(inp.fb) && inp.fb === inp.fs ? CMP_RATES.slice() : [...CMP_RATES];
+  const mineSame = inp.fb === inp.fs && CMP_RATES.includes(inp.fb);
+  const cmpRows = rates.map(fr => ({ label: rateTxt(fr), mine: mineSame && fr === inp.fb, R: krCalc(inp, { fb: fr, fs: fr }), be: krBreakeven(inp, { fb: fr, fs: fr }) }));
+  if (!mineSame) cmpRows.push({ label: inp.fb === inp.fs ? rateTxt(inp.fb) : `${rateTxt(inp.fb)}/${rateTxt(inp.fs)}`, mine: true, R, be });
+  document.getElementById('cmp-subtitle').textContent = `${t.label} · 매수 ${won(R.buyAmt)} → 매도 ${won(R.sellAmt)} 거래를 수수료율만 바꿔 본 결과입니다.`;
+  document.getElementById('cmp-head').innerHTML = `<tr><th>수수료율(매수·매도)</th><th>수수료</th><th>세금</th><th>총비용</th><th>비용 차감 손익</th><th>실제 수익률</th><th>본전 매도가</th><th>연 ${inp.n}회 비용</th></tr>`;
+  document.getElementById('cmp-body').innerHTML = cmpRows.map(c => `<tr${c.mine ? ' class="highlight-row"' : ''}>
+    <td>${c.label}${c.mine ? '<span class="tag-mini">입력값</span>' : ''}</td>
+    <td>${won(c.R.buyFee + c.R.sellFee)}</td><td>${won(c.R.tax)}</td>
+    <td class="c-accent">${won(c.R.cost)}</td><td>${wonS(c.R.net)}</td><td>${pctS(c.R.ret)}</td>
+    <td class="c-brown">${c.be ? won(c.be.price) : '-'}</td><td>${won(c.R.cost * inp.n)} (${pctN(c.R.c1 * inp.n)})</td></tr>`).join('');
+
+  // 연간 횟수별
+  const altM = etf ? 'kospi' : 'etf';
+  const alt = krCalc(inp, { m: altM });
+  const altName = etf ? '코스피 주식이었다면' : 'ETF였다면';
+  const freqs = FREQS.includes(inp.n) || inp.n === 0 ? FREQS.slice() : [...FREQS, inp.n].sort((a, b) => a - b);
+  document.getElementById('freq-title').textContent = `1년에 여러 번 사고팔면?`;
+  document.getElementById('freq-subtitle').textContent = `이번 거래(1회 왕복 비용 ${won(R.cost)}, 매수금액의 ${pctN(R.c1, 3)})를 1년에 여러 번 반복할 때입니다. 오른쪽은 같은 수수료로 ${etf ? '코스피 주식(거래세 0.20%)' : 'ETF(거래세 면제)'}를 사고팔았다면입니다.`;
+  document.getElementById('freq-head').innerHTML = `<tr><th>1년 왕복 횟수</th><th>연간 비용</th><th>투자금 대비</th><th>${altName}</th></tr>`;
+  const freqRows = freqs.map(f => ({ f, cost: R.cost * f, pct: R.c1 * f, alt: alt.c1 * f, altCost: alt.cost * f }));
+  document.getElementById('freq-body').innerHTML = freqRows.map(z => `<tr${z.f === inp.n ? ' class="highlight-row"' : ''}>
+    <td>${z.f}회${z.f === inp.n ? '<span class="tag-mini">입력값</span>' : ''}</td><td>${won(z.cost)}</td><td class="c-accent">${pctN(z.pct)}</td><td class="c-green">${pctN(z.alt)} (${won(z.altCost)})</td></tr>`).join('');
+
+  drawLong(inp, R.buyAmt, R.c1, alt.c1, altName.replace('이었다면', '').replace('였다면', ''));
+  renderInsightKR(inp, R, alt);
+
+  lastExport = {
+    tab: 'kr',
+    breakdown: [['항목', '금액(원)', '계산'],
+      ['시장', t.label, ''], ['매수금액', R.buyAmt, `${inp.bp}원 × ${inp.q}주`], ['매도금액', R.sellAmt, `${inp.sp}원 × ${inp.q}주`],
+      ['매수 수수료', R.buyFee, `매수금액 × ${inp.fb}%`], ['매도 수수료', R.sellFee, `매도금액 × ${inp.fs}%`],
+      ['증권거래세', R.stt, `매도금액 × ${(t.stt * 100).toFixed(2)}%`], ['농어촌특별세', R.rural, `매도금액 × ${(t.rural * 100).toFixed(2)}%`],
+      ['총 거래비용', R.cost, ''], ['세전 손익', R.gross, ''], ['비용 차감 손익', R.net, ''],
+      ['실제 수익률(%)', Math.round(R.ret * 10000) / 100, ''], ['연환산 수익률(%)', R.ann === null ? '' : Math.round(R.ann * 10000) / 100, R.ann === null ? '' : `보유 ${inp.d}일`],
+      ['본전 매도가', be ? be.price : '', '호가 단위 올림']],
+    cmp: [['수수료율(%)', '수수료(원)', '세금(원)', '총비용(원)', '비용 차감 손익(원)', '실제 수익률(%)', '본전 매도가(원)', `연 ${inp.n}회 비용(원)`, `연 ${inp.n}회 비용(%)`],
+      ...cmpRows.map(c => [c.label + (c.mine ? ' (입력값)' : ''), c.R.buyFee + c.R.sellFee, c.R.tax, c.R.cost, c.R.net, Math.round(c.R.ret * 10000) / 100, c.be ? c.be.price : '', c.R.cost * inp.n, Math.round(c.R.c1 * inp.n * 10000) / 100])],
+    freq: [['1년 왕복 횟수', '연간 비용(원)', '투자금 대비(%)', `${altName} 비용(원)`, `${altName}(%)`],
+      ...freqRows.map(z => [z.f, z.cost, Math.round(z.pct * 10000) / 100, z.altCost, Math.round(z.alt * 10000) / 100])],
+  };
+  lastCopy = [
+    `[주식 거래비용 계산 · 국내 ${t.label}]`,
+    `${inp.bp.toLocaleString()}원 × ${inp.q.toLocaleString()}주 매수 → ${inp.sp.toLocaleString()}원 매도`,
+    `수수료(매수 ${rateTxt(inp.fb)}·매도 ${rateTxt(inp.fs)}): ${won(R.buyFee)} + ${won(R.sellFee)}`,
+    etf ? '증권거래세: 0원 (ETF·ETN 면제)' : inp.m === 'kospi' ? `증권거래세 ${won(R.stt)} + 농특세 ${won(R.rural)}` : `증권거래세: ${won(R.tax)}`,
+    `총비용 ${won(R.cost)} (매수금액의 ${pctN(R.c1, 3)})`,
+    `세전 손익 ${wonS(R.gross)} → 비용 차감 ${wonS(R.net)} (실제 수익률 ${pctS(R.ret)}${R.ann !== null ? `, 연환산 ${annTxt(R.ann)}` : ''})`,
+    be ? `본전 매도가 ${won(be.price)}` : '',
+    inp.n > 0 ? `1년 ${inp.n}번 왕복 시 연 비용 약 ${won(R.cost * inp.n)} (투자금의 ${pctN(R.c1 * inp.n)})` : '',
+  ].filter(Boolean).join('\n');
+}
+
+function renderUS(inp) {
+  const U = usCalc(inp);
+  const be = usBreakeven(inp);
+  const annualPct = U.c1 * inp.n;
+  document.getElementById('verdict-label').textContent = '미국주식';
+  document.getElementById('verdict-main').innerHTML = `원화로 따지면 <span class="hl">${wonS(U.krwPL)}</span>, 실제 수익률 <span class="hl">${pctS(U.ret)}</span>입니다`;
+  document.getElementById('verdict-sub').innerHTML =
+    `달러로는 ${usdS(U.usdGross)}(${pctS(U.usdGross / U.buyAmt)})이지만, 수수료·환전·SEC fee 등 비용이 <strong>${won(U.cost)}</strong> 들고 환율 변동으로 <strong>${wonS(U.fxPL)}</strong>가 더해졌습니다.` +
+    (inp.n > 0 ? ` 이런 거래를 1년에 ${inp.n}번 하면 비용만 약 <strong>${won(U.cost * inp.n)}</strong>(투자금의 ${pctN(annualPct)})입니다.` : '');
+
+  setStat(1, '총 거래비용 (원화)', won(U.cost), `원화 투입액의 ${pctN(U.c1, 3)}`);
+  setStat(2, '달러 손익', usdS(U.usdNet), `비용 전 ${usdS(U.usdGross)} · 수수료·SEC·TAF 차감`);
+  setStat(3, '원화 손익', wonS(U.krwPL), `주가 ${wonS(U.stockPL)} · 환차 ${wonS(U.fxPL)}`);
+  if (be) setStat(4, '본전 매도가', usdPrice(be.price), `매수가보다 ${pctS(be.price / inp.ubp - 1)} · 매도 환율 ${inp.fxs.toLocaleString()}원 기준`);
+  else setStat(4, '본전 매도가', '-', '');
+
+  document.getElementById('cost-title').textContent = '원화 기준 손익과 비용 내역';
+  document.getElementById('cost-subtitle').textContent = `${usdPrice(inp.ubp)}에 ${inp.uq.toLocaleString()}주 사서 ${usdPrice(inp.usp)}에 팔 때 · 환율 ${inp.fxb.toLocaleString()}원 → ${inp.fxs.toLocaleString()}원`;
+  const fxNote = inp.fxu === 'pct' ? `환율 × ${inp.fx}%` : `1달러당 ${inp.fx}원`;
+  let html = '';
+  html += row('매수금액', `${usd(U.buyAmt)}<br><small>${won(U.buyAmt * inp.fxb)}</small>`, `${usdPrice(inp.ubp)} × ${inp.uq}주`);
+  html += row('매도금액', `${usd(U.sellAmt)}<br><small>${won(U.sellAmt * inp.fxs)}</small>`, `${usdPrice(inp.usp)} × ${inp.uq}주`);
+  html += row('주가 손익', wonS(U.stockPL), `달러 손익 ${usdS(U.usdGross)} × 매도 환율`);
+  html += row('환차손익', wonS(U.fxPL), `매수금액 ${usd(U.buyAmt)} × (${inp.fxs.toLocaleString()} − ${inp.fxb.toLocaleString()})`);
+  html += row('매수 수수료', `${won(U.c.buyFee)}<br><small>${usd(U.buyFee)}</small>`, `매수금액 × ${rateTxt(inp.ufb)}`);
+  html += row('매도 수수료', `${won(U.c.sellFee)}<br><small>${usd(U.sellFee)}</small>`, `매도금액 × ${rateTxt(inp.ufs)}`);
+  html += row('SEC fee', `${won(U.c.sec)}<br><small>${usd(U.sec)}</small>`, `매도금액 × $${inp.sec}/100만 달러 (센트 올림)`);
+  html += row('FINRA TAF', `${won(U.c.taf)}<br><small>${usd(U.taf)}</small>`, `${inp.uq}주 × $${inp.taf} (최대 $${TAF_MAX})`);
+  html += row('환전 비용 (살 때)', won(U.c.fxB), `${usd(U.usdOut)} 환전 · ${fxNote}`);
+  html += row('환전 비용 (팔 때)', won(U.c.fxS), `${usd(U.usdIn)} 환전 · ${fxNote}`);
+  html += row('총 거래비용', won(U.cost), `원화 투입액의 ${pctN(U.c1, 3)}`, 'total');
+  html += row('원화 손익', wonS(U.krwPL), `받은 돈 ${won(U.krwIn)} − 낸 돈 ${won(U.krwOut)}`, 'total');
+  html += row('실제 원화 수익률', pctS(U.ret), `원화 손익 ÷ ${won(U.krwOut)}`);
+  document.getElementById('cost-body').innerHTML = html;
+  document.getElementById('be-box').innerHTML = be
+    ? `<b>본전 매도가</b> <span class="be-num">${usdPrice(be.price)}</span> — 매도 환율이 ${inp.fxs.toLocaleString()}원일 때, 이 가격 이상에 팔아야 수수료·환전·SEC fee를 다 내고도 원화로 손해가 없습니다.` +
+      (be.fxBE ? ` 거꾸로 주가가 그대로(${usdPrice(inp.ubp)})라면 환율이 <b>${be.fxBE.toLocaleString(undefined, { maximumFractionDigits: 1 })}원</b> 이상이어야 본전입니다.` : '') +
+      (inp.fxs !== inp.fxb ? (() => { const b0 = usBreakeven(inp, { fxs: inp.fxb }); return b0 ? ` 환율이 매수 때(${inp.fxb.toLocaleString()}원)와 같다면 본전 매도가는 <b>${usdPrice(b0.price)}</b>입니다${be.price < inp.ubp ? ' — 지금은 환율이 오른 덕분에 매수가보다 낮게 팔아도 본전입니다' : be.price > b0.price ? ' — 환율이 내린 만큼 주가가 더 올라야 본전입니다' : ''}.` : ''; })() : '')
+    : '-';
+  document.getElementById('us-tax-note').style.display = '';
+
+  // 수수료율 비교
+  const mineSame = inp.ufb === inp.ufs && CMP_RATES.includes(inp.ufb);
+  const cmpRows = CMP_RATES.map(fr => ({ label: rateTxt(fr), mine: mineSame && fr === inp.ufb, U: usCalc(inp, { ufb: fr, ufs: fr }), be: usBreakeven(inp, { ufb: fr, ufs: fr }) }));
+  if (!mineSame) cmpRows.push({ label: inp.ufb === inp.ufs ? rateTxt(inp.ufb) : `${rateTxt(inp.ufb)}/${rateTxt(inp.ufs)}`, mine: true, U, be });
+  document.getElementById('cmp-subtitle').textContent = `미국주식 · 매수 ${usd(U.buyAmt)} → 매도 ${usd(U.sellAmt)} 거래를 수수료율만 바꿔 본 결과입니다(원화 기준).`;
+  document.getElementById('cmp-head').innerHTML = `<tr><th>수수료율(매수·매도)</th><th>수수료</th><th>환전·SEC·TAF</th><th>총비용</th><th>원화 손익</th><th>실제 수익률</th><th>본전 매도가</th><th>연 ${inp.n}회 비용</th></tr>`;
+  document.getElementById('cmp-body').innerHTML = cmpRows.map(c => `<tr${c.mine ? ' class="highlight-row"' : ''}>
+    <td>${c.label}${c.mine ? '<span class="tag-mini">입력값</span>' : ''}</td>
+    <td>${won(c.U.c.buyFee + c.U.c.sellFee)}</td><td>${won(c.U.c.fxB + c.U.c.fxS + c.U.c.sec + c.U.c.taf)}</td>
+    <td class="c-accent">${won(c.U.cost)}</td><td>${wonS(c.U.krwPL)}</td><td>${pctS(c.U.ret)}</td>
+    <td class="c-brown">${c.be ? usdPrice(c.be.price) : '-'}</td><td>${won(c.U.cost * inp.n)} (${pctN(c.U.c1 * inp.n)})</td></tr>`).join('');
+
+  // 연간 횟수별: 비교열 = 수수료 0.07%·환전 우대 95%로 했다면? → 단순하게 '환전 없이 달러로 굴린다면'
+  const noFx = usCalc(inp, { fx: 0 });
+  const freqs = FREQS.includes(inp.n) || inp.n === 0 ? FREQS.slice() : [...FREQS, inp.n].sort((a, b) => a - b);
+  document.getElementById('freq-subtitle').textContent = `이번 거래(1회 왕복 비용 ${won(U.cost)}, 원화 투입액의 ${pctN(U.c1, 3)})를 1년에 여러 번 반복할 때입니다. 오른쪽은 환전 없이 달러로 계속 사고팔았다면(수수료·SEC fee·TAF만)입니다.`;
+  document.getElementById('freq-head').innerHTML = `<tr><th>1년 왕복 횟수</th><th>연간 비용</th><th>투자금 대비</th><th>환전 없이 달러로</th></tr>`;
+  const freqRows = freqs.map(f => ({ f, cost: U.cost * f, pct: U.c1 * f, alt: noFx.c1 * f, altCost: noFx.cost * f }));
+  document.getElementById('freq-body').innerHTML = freqRows.map(z => `<tr${z.f === inp.n ? ' class="highlight-row"' : ''}>
+    <td>${z.f}회${z.f === inp.n ? '<span class="tag-mini">입력값</span>' : ''}</td><td>${won(z.cost)}</td><td class="c-accent">${pctN(z.pct)}</td><td class="c-green">${pctN(z.alt)} (${won(z.altCost)})</td></tr>`).join('');
+
+  drawLong(inp, U.krwOut, U.c1, noFx.c1, '환전 없이');
+  renderInsightUS(inp, U, noFx);
+
+  lastExport = {
+    tab: 'us',
+    breakdown: [['항목', '원화(원)', '달러', '계산'],
+      ['매수금액', Math.round(U.buyAmt * inp.fxb), r2(U.buyAmt), `${inp.ubp} × ${inp.uq}주 · 환율 ${inp.fxb}`],
+      ['매도금액', Math.round(U.sellAmt * inp.fxs), r2(U.sellAmt), `${inp.usp} × ${inp.uq}주 · 환율 ${inp.fxs}`],
+      ['주가 손익', Math.round(U.stockPL), r2(U.usdGross), '달러 손익 × 매도 환율'],
+      ['환차손익', Math.round(U.fxPL), '', '매수금액 × (매도 환율 − 매수 환율)'],
+      ['매수 수수료', Math.round(U.c.buyFee), U.buyFee, `${inp.ufb}%`], ['매도 수수료', Math.round(U.c.sellFee), U.sellFee, `${inp.ufs}%`],
+      ['SEC fee', Math.round(U.c.sec), U.sec, `$${inp.sec}/100만 달러`], ['FINRA TAF', Math.round(U.c.taf), U.taf, `$${inp.taf}/주`],
+      ['환전 비용(살 때)', Math.round(U.c.fxB), '', fxNote], ['환전 비용(팔 때)', Math.round(U.c.fxS), '', fxNote],
+      ['총 거래비용', Math.round(U.cost), '', ''], ['원화로 낸 돈', Math.round(U.krwOut), r2(U.usdOut), ''], ['원화로 받은 돈', Math.round(U.krwIn), r2(U.usdIn), ''],
+      ['원화 손익', Math.round(U.krwPL), r2(U.usdNet), '달러 칸 = 비용 차감 달러 손익'], ['실제 원화 수익률(%)', Math.round(U.ret * 10000) / 100, '', ''],
+      ['본전 매도가(달러)', '', be ? be.price : '', `매도 환율 ${inp.fxs} 기준`]],
+    cmp: [['수수료율(%)', '수수료(원)', '환전·SEC·TAF(원)', '총비용(원)', '원화 손익(원)', '실제 수익률(%)', '본전 매도가(달러)', `연 ${inp.n}회 비용(원)`, `연 ${inp.n}회 비용(%)`],
+      ...cmpRows.map(c => [c.label + (c.mine ? ' (입력값)' : ''), Math.round(c.U.c.buyFee + c.U.c.sellFee), Math.round(c.U.c.fxB + c.U.c.fxS + c.U.c.sec + c.U.c.taf), Math.round(c.U.cost), Math.round(c.U.krwPL), Math.round(c.U.ret * 10000) / 100, c.be ? c.be.price : '', Math.round(c.U.cost * inp.n), Math.round(c.U.c1 * inp.n * 10000) / 100])],
+    freq: [['1년 왕복 횟수', '연간 비용(원)', '투자금 대비(%)', '환전 없이 달러로 비용(원)', '환전 없이 달러로(%)'],
+      ...freqRows.map(z => [z.f, Math.round(z.cost), Math.round(z.pct * 10000) / 100, Math.round(z.altCost), Math.round(z.alt * 10000) / 100])],
+  };
+  lastCopy = [
+    '[주식 거래비용 계산 · 미국주식]',
+    `${usdPrice(inp.ubp)} × ${inp.uq.toLocaleString()}주 매수(환율 ${inp.fxb.toLocaleString()}원) → ${usdPrice(inp.usp)} 매도(환율 ${inp.fxs.toLocaleString()}원)`,
+    `달러 손익 ${usdS(U.usdGross)} → 수수료·SEC·TAF 차감 ${usdS(U.usdNet)}`,
+    `원화 손익 ${wonS(U.krwPL)} (주가 ${wonS(U.stockPL)} · 환차 ${wonS(U.fxPL)} · 비용 -${won(U.cost)})`,
+    `비용: 수수료 ${won(U.c.buyFee + U.c.sellFee)} · 환전 ${won(U.c.fxB + U.c.fxS)} · SEC ${won(U.c.sec)} · TAF ${won(U.c.taf)}`,
+    `실제 원화 수익률 ${pctS(U.ret)}`,
+    be ? `본전 매도가 ${usdPrice(be.price)} (매도 환율 ${inp.fxs.toLocaleString()}원 기준)` : '',
+    inp.n > 0 ? `1년 ${inp.n}번 왕복 시 연 비용 약 ${won(U.cost * inp.n)} (투자금의 ${pctN(U.c1 * inp.n)})` : '',
+    '※ 해외주식 양도소득세(250만원 공제 후 22%) 별도',
+  ].filter(Boolean).join('\n');
+}
+
+// ============== 20년 비교 그래프 ==============
+const chartCommonOptions = {
+  responsive: true,
+  maintainAspectRatio: false,
+  plugins: {
+    legend: { labels: { font: { family: 'Pretendard', size: 13, weight: 600 }, color: '#1A1A1A', usePointStyle: true, padding: 16 } },
+    tooltip: {
+      backgroundColor: '#FBF7F0', titleColor: '#1A1A1A', bodyColor: '#3A2F26', borderColor: '#D9542B', borderWidth: 1.5,
+      padding: 14, titleFont: { family: 'Pretendard', size: 14, weight: 800 }, bodyFont: { family: 'Pretendard', size: 13, weight: 600 },
+      titleSpacing: 6, bodySpacing: 8, titleMarginBottom: 10, caretSize: 8, cornerRadius: 10, usePointStyle: true, boxPadding: 6,
+    }
+  }
+};
+const endLabelPlugin = {
+  id: 'endLabel',
+  afterDatasetsDraw(chart) {
+    const { ctx } = chart;
+    ctx.save();
+    const labels = [];
+    chart.data.datasets.forEach((ds, i) => {
+      const meta = chart.getDatasetMeta(i);
+      if (meta.hidden) return;
+      const last = ds.data.length - 1;
+      const p = meta.data[last];
+      if (!p) return;
+      labels.push({ x: p.x, y: p.y, color: ds._endLabelColor || ds.borderColor, text: ds._short || ds.label, value: ds.data[last] });
+    });
+    labels.sort((a, b) => a.y - b.y);
+    for (let i = 1; i < labels.length; i++) if (labels[i].y - labels[i - 1].y < 18) labels[i].y = labels[i - 1].y + 18;
+    const isMobile = window.innerWidth < 768;
+    labels.forEach(l => {
+      const fs = isMobile ? 10 : 11;
+      ctx.font = `700 ${fs}px Pretendard, sans-serif`;
+      ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+      const text = `${l.text} ${formatKRW(l.value)}`;
+      const tw = ctx.measureText(text).width;
+      const padX = isMobile ? 6 : 8, padY = isMobile ? 3 : 4;
+      const bx = l.x + 6, bh = fs + padY * 2, by = l.y - bh / 2, bw = tw + padX * 2, r = 4;
+      ctx.fillStyle = '#FBF7F0'; ctx.strokeStyle = l.color; ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      if (typeof ctx.roundRect === 'function') ctx.roundRect(bx, by, bw, bh, r); else ctx.rect(bx, by, bw, bh);
+      ctx.fill(); ctx.stroke();
+      ctx.fillStyle = l.color;
+      ctx.fillText(text, bx + padX, l.y);
+    });
+    ctx.restore();
+  }
+};
+function growthPath(P, R, c1, n) {
+  const g = (1 + R) * Math.pow(Math.max(0, 1 - c1), n);
+  return Array.from({ length: YEARS + 1 }, (_, y) => P * Math.pow(g, y));
+}
+function drawLong(inp, P, c1, altC1, altShort) {
+  const R = inp.r / 100, n = inp.n;
+  const isMobile = window.innerWidth < 768;
+  const hold = growthPath(P, R, 0, 0), mine = growthPath(P, R, c1, n), alt = growthPath(P, R, altC1, n);
+  const ds = [
+    { label: '매매 비용 없이 보유', _short: '보유', data: hold, borderColor: '#3A2F26', borderWidth: 2, borderDash: [6, 4], fill: false, tension: 0.2, pointRadius: 0, pointHoverRadius: 4 },
+    { label: `연 ${n}회 사고팔기 (지금 조건)`, _short: `${n}회`, data: mine, borderColor: '#D9542B', backgroundColor: 'rgba(217,84,43,0.08)', borderWidth: 3, fill: true, tension: 0.2, pointRadius: 0, pointHoverRadius: 5 },
+  ];
+  if (Math.abs(altC1 - c1) > 1e-9 && n > 0) ds.push({ label: `연 ${n}회 · ${altShort}`, _short: altShort, data: alt, borderColor: '#4A5A4A', borderWidth: 2, borderDash: [3, 3], fill: false, tension: 0.2, pointRadius: 0, pointHoverRadius: 4 });
+  const lost = hold[YEARS] - mine[YEARS];
+  document.getElementById('long-title').textContent = `${YEARS}년 뒤 자산 차이`;
+  document.getElementById('long-subtitle').innerHTML = n > 0
+    ? `투자금 ${formatKRW(P)}원을 연 ${inp.r}%로 ${YEARS}년 굴린다고 가정하면, 1년에 ${n}번 사고팔 때 비용으로 사라지는 돈이 <b>${formatKRW(lost)}원</b>입니다(보유만 했을 때의 ${pctN(lost / hold[YEARS], 0)}).`
+    : `1년 왕복 횟수가 0이면 매매 비용 없이 굴린 경우와 같습니다.`;
+  if (longChart) longChart.destroy();
+  longChart = new Chart(document.getElementById('long-chart'), {
+    type: 'line',
+    data: { labels: Array.from({ length: YEARS + 1 }, (_, y) => y === 0 ? '지금' : y + '년'), datasets: ds },
+    options: {
+      ...chartCommonOptions,
+      interaction: { mode: 'index', intersect: false },
+      layout: { padding: { right: isMobile ? 96 : 150, top: 10, bottom: 4, left: 4 } },
+      scales: {
+        x: { grid: { display: false }, ticks: { font: { family: 'Pretendard', size: 11, weight: 600 }, color: '#8B8276', maxTicksLimit: isMobile ? 6 : 11 } },
+        y: { grid: { color: '#EFE7DA' }, ticks: { font: { family: 'Pretendard', size: 11, weight: 600 }, color: '#8B8276', callback: v => formatKRW(v) } },
+      },
+      plugins: {
+        ...chartCommonOptions.plugins,
+        legend: { display: true, position: 'bottom', labels: { ...chartCommonOptions.plugins.legend.labels, font: { family: 'Pretendard', size: isMobile ? 11 : 13, weight: 600 } } },
+        tooltip: {
+          ...chartCommonOptions.plugins.tooltip, mode: 'index', intersect: false,
+          itemSort: (a, b) => b.parsed.y - a.parsed.y,
+          callbacks: { label: c => '  ' + c.dataset.label + ': ' + won(c.parsed.y) },
+        },
+      },
+    },
+    plugins: [endLabelPlugin],
+  });
+}
+
+// ============== KEY INSIGHT ==============
+function renderInsightKR(inp, R, alt) {
+  const t = document.getElementById('insight-title'), d = document.getElementById('insight-desc');
+  const etf = inp.m === 'etf';
+  const n12 = 12;
+  const yr = R.c1 * n12;
+  const stockC1 = etf ? alt.c1 : R.c1, etfC1 = etf ? R.c1 : alt.c1;
+  const share = inp.r > 0 ? yr / (inp.r / 100) : null;
+  t.textContent = `1년 12번 왕복이면 비용만 투자금의 ${pctN(yr)}입니다`;
+  d.innerHTML =
+    `지금 조건(${KR_TAX[inp.m].label}, 수수료 ${rateTxt(inp.fb)}/${rateTxt(inp.fs)})으로 한 번 사고팔 때 비용은 매수금액의 <strong>${pctN(R.c1, 3)}</strong>. 작아 보여도 매달 한 번씩 사고팔면 1년에 <strong>${pctN(yr)}</strong>가 빠져나갑니다.` +
+    (share !== null ? ` 기대 수익률이 연 ${inp.r}%라면 그중 <strong>${pctN(Math.min(share, 9.99), 0)}</strong>를 비용이 가져가는 셈입니다.` : '') +
+    ` 국내 주식은 팔 때마다 증권거래세 0.20%(코스피는 거래세 0.05% + 농특세 0.15%)가 붙지만, <strong>ETF는 증권거래세가 면제</strong>라 같은 수수료로 12번 왕복해도 <strong>${pctN(etfC1 * n12)}</strong>입니다(주식이면 ${pctN(stockC1 * n12)}). 장기 투자에서 비용을 줄이는 순서는 ① 덜 사고팔기 ② 거래세 없는 ETF 활용 ③ 수수료 싼 곳 고르기입니다.`;
+}
+function renderInsightUS(inp, U, noFx) {
+  const t = document.getElementById('insight-title'), d = document.getElementById('insight-desc');
+  const yr = U.c1 * 12;
+  const fxShare = U.cost > 0 ? (U.c.fxB + U.c.fxS) / U.cost : 0;
+  const feeShare = U.cost > 0 ? (U.c.buyFee + U.c.sellFee) / U.cost : 0;
+  t.textContent = `미국주식 1년 12번 왕복이면 비용만 ${pctN(yr)}입니다`;
+  d.innerHTML =
+    `한 번 사고팔 때 비용은 원화 투입액의 <strong>${pctN(U.c1, 3)}</strong>이고, 그중 수수료가 ${pctN(feeShare, 0)}, 환전 비용이 ${pctN(fxShare, 0)}입니다. SEC fee는 0.00206%라 금액은 작습니다.` +
+    ` 매달 사고팔면 1년에 <strong>${pctN(yr)}</strong>, 환전 없이 달러로만 굴려도 <strong>${pctN(noFx.c1 * 12)}</strong>입니다.` +
+    ` 미국주식은 국내 주식보다 수수료율이 높은 경우가 많아 잦은 매매의 부담이 더 큽니다. 여기에 1년 매매차익이 250만원을 넘으면 <strong>해외주식 양도세 22%</strong>가 따로 붙으니, 국내상장 해외 ETF(팔 때 거래세 면제, 대신 매매차익에 배당소득세 15.4%)와 비교해 보는 것도 방법입니다.`;
+}
+
+// ============== 표 내려받기 ==============
+document.addEventListener('click', e => {
+  const id = e.target && e.target.id;
+  if (!lastExport || (id !== 'dl-csv' && id !== 'dl-xlsx')) return;
+  const base = lastExport.tab === 'kr' ? '거래비용_국내' : '거래비용_미국';
+  if (id === 'dl-csv') TJX.csv(base + '_수수료율비교', lastExport.cmp);
+  else TJX.xlsx(base, [
+    { name: '비용 내역', rows: lastExport.breakdown, widths: lastExport.tab === 'kr' ? [18, 16, 30] : [18, 14, 12, 34] },
+    { name: '수수료율 비교', rows: lastExport.cmp, widths: [16, 13, 15, 13, 17, 14, 16, 16, 15] },
+    { name: '연간 횟수별', rows: lastExport.freq, widths: [14, 15, 15, 22, 18] },
+  ]);
+});
+
+// ============== 복사 ==============
+function copyText(text, btn, label) {
+  const done = ok => { btn.textContent = ok ? '복사했습니다' : '복사 실패 — 직접 선택해 복사하세요'; setTimeout(() => btn.textContent = label, 1800); };
+  const fallback = () => {
+    const ta = document.createElement('textarea'); ta.value = text; ta.setAttribute('readonly', ''); ta.style.position = 'fixed'; ta.style.opacity = '0';
+    document.body.appendChild(ta); ta.select();
+    let ok = false; try { ok = document.execCommand('copy'); } catch (err) {}
+    ta.remove(); done(ok);
+  };
+  if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(text).then(() => done(true), fallback);
+  else fallback();
+}
+function copyResult() {
+  const btn = document.getElementById('copy-result');
+  if (!lastCopy) { btn.textContent = '먼저 값을 입력해 주세요'; setTimeout(() => btn.textContent = '결과 복사', 1800); return; }
+  copyText(lastCopy + '\n' + buildUrl(readInputs()), btn, '결과 복사');
+}
+function copyLink() { copyText(buildUrl(readInputs()), document.getElementById('copy-link'), '링크 복사'); }
+
+// ============== 주소로 값 주고받기 ==============
+const KR_KEYS = ['bp', 'sp', 'q', 'fb', 'fs'];
+const US_KEYS = ['ubp', 'usp', 'uq', 'fxb', 'fxs', 'ufb', 'ufs', 'fx', 'sec', 'taf'];
+function buildUrl(inp) {
+  const p = new URLSearchParams();
+  p.set('tab', TAB);
+  if (TAB === 'kr') {
+    p.set('m', MARKET);
+    KR_KEYS.forEach(k => p.set(k, String(inp[k])));
+    p.set('d', inp.d === null ? '' : String(inp.d));
+  } else {
+    US_KEYS.forEach(k => p.set(k, String(inp[k])));
+    p.set('fxu', FXU);
+  }
+  p.set('n', String(inp.n));
+  p.set('r', String(inp.r));
+  return location.href.split('?')[0].split('#')[0] + '?' + p.toString();
+}
+function syncUrl(inp) {
+  try { history.replaceState(null, '', buildUrl(inp)); } catch (e) { /* file:// 등에서는 무시 */ }
+}
+function readUrl() {
+  let q; try { q = new URLSearchParams(location.search); } catch (e) { return; }
+  if (!q.toString()) return;
+  [...KR_KEYS, ...US_KEYS, 'n', 'r'].forEach(k => {
+    if (!q.has(k)) return;
+    const v = parseFloat(q.get(k));
+    if (!isFinite(v) || v < -10 || v > 1e10) return;
+    document.getElementById(k).value = String(v);
+  });
+  if (q.has('d')) { const v = parseFloat(q.get('d')); document.getElementById('d').value = isFinite(v) && v >= 0 ? String(Math.round(v)) : ''; }
+  if (KR_TAX[q.get('m')]) MARKET = q.get('m');
+  if (['pct', 'won'].includes(q.get('fxu'))) FXU = q.get('fxu');
+  if (['kr', 'us'].includes(q.get('tab'))) TAB = q.get('tab');
+}
+
+// ============== 입력칸 숫자 뒤 단위 ==============
+const unitCanvas = document.createElement('canvas').getContext('2d');
+function placeUnits() {
+  document.querySelectorAll('.input-wrap input[data-unit]').forEach(inp => {
+    let tag = inp.parentNode.querySelector('.input-unit');
+    if (!tag) { tag = document.createElement('span'); tag.className = 'input-unit'; inp.after(tag); }
+    tag.textContent = inp.dataset.unit;
+    const cs = getComputedStyle(inp);
+    if (inp.value === '' || !inp.offsetWidth) { tag.style.visibility = 'hidden'; return; }
+    unitCanvas.font = `${cs.fontWeight} ${cs.fontSize} ${cs.fontFamily}`;
+    const w = unitCanvas.measureText(inp.value).width;
+    const left = parseFloat(cs.paddingLeft) + parseFloat(cs.borderLeftWidth) + w + 4 - inp.scrollLeft;
+    tag.style.left = Math.round(left) + 'px';
+    tag.style.fontSize = cs.fontSize;
+    tag.style.visibility = left + tag.offsetWidth < inp.clientWidth - parseFloat(cs.paddingRight) + 8 ? 'visible' : 'hidden';
+  });
+}
+
+// ============== 입력 UI ==============
+function updateDisplays() {
+  const v = id => parseFloat(document.getElementById(id).value);
+  const set = (id, text, empty) => { const el = document.getElementById(id); el.textContent = text; el.classList.toggle('empty', !!empty); };
+  const bp = v('bp'), sp = v('sp'), q = v('q'), d = v('d');
+  set('bp-display', bp > 0 ? formatKRW(bp) + '원' : '입력', !(bp > 0));
+  set('sp-display', sp > 0 ? (bp > 0 ? pctS(sp / bp - 1, 1) : formatKRW(sp) + '원') : '입력', !(sp > 0));
+  set('q-display', q > 0 ? (bp > 0 ? '총 ' + formatKRW(bp * Math.floor(q)) + '원' : Math.floor(q) + '주') : '입력', !(q > 0));
+  set('d-display', d > 0 ? (d >= 365 ? (d / 365).toFixed(1).replace(/\.0$/, '') + '년' : d >= 30 ? Math.round(d / 30.4) + '개월쯤' : d + '일') : '생략', !(d > 0));
+  ['fb', 'fs'].forEach(id => { const x = v(id); set(id + '-display', isFinite(x) ? (x <= 0 ? '무료' : rateTxt(x)) : '-', !isFinite(x)); });
+  const uq = v('uq'), ubp = v('ubp');
+  set('uq-display', uq > 0 && ubp > 0 ? '총 ' + usd(ubp * Math.floor(uq), 0) : '입력', !(uq > 0 && ubp > 0));
+  const fx = v('fx');
+  set('fx-display', isFinite(fx) ? (FXU === 'pct' ? (fx > 0 ? `우대 ${Math.max(0, Math.round((1 - fx) * 100))}%쯤` : '무료') : `${fx}원/달러`) : '-', !isFinite(fx));
+  const n = v('n'), r = v('r');
+  set('n-display', n > 0 ? (n >= 52 ? '매주' : n >= 12 ? '매달 ' + (n / 12).toFixed(1).replace(/\.0$/, '') + '번' : '연 ' + Math.round(n) + '번') : '안 함', !(n > 0));
+  set('r-display', isFinite(r) ? '연 ' + r + '%' : '-', !isFinite(r));
+  document.querySelectorAll('.chips[data-target]').forEach(box => {
+    const cur = parseFloat(document.getElementById(box.dataset.target).value);
+    box.querySelectorAll('.chip').forEach(ch => ch.classList.toggle('on', parseFloat(ch.dataset.v) === cur));
+  });
+  document.querySelectorAll('#market-chips .chip').forEach(ch => ch.classList.toggle('on', ch.dataset.m === MARKET));
+  document.querySelectorAll('#fxu-chips .chip').forEach(ch => ch.classList.toggle('on', ch.dataset.u === FXU));
+  document.getElementById('fx').dataset.unit = FXU === 'pct' ? '%' : '원';
+  document.getElementById('fx-pct-chips').classList.toggle('is-hidden', FXU !== 'pct');
+  document.getElementById('fx-hint').textContent = FXU === 'pct'
+    ? '환전 스프레드 1%에 환율 우대 90%면 0.1%입니다. 증권사 앱의 \'환전 우대율\'을 확인하세요.'
+    : '살 때는 매매기준율보다 이만큼 비싸게, 팔 때는 이만큼 싸게 환전한다고 봅니다(예: 스프레드 1% × 우대 90% ≈ 1달러당 1.4원).';
+  const mh = { kospi: '팔 때 증권거래세 0.05% + 농어촌특별세 0.15% = 0.20% (2026년부터)', kosdaq: '팔 때 증권거래세 0.20%, 농특세 없음 (2026년부터)', etf: 'ETF·ETN은 팔 때 증권거래세가 없습니다. 수수료만 계산합니다' };
+  document.getElementById('market-hint').textContent = mh[MARKET];
+}
+function applyTab() {
+  document.querySelectorAll('.mode-tab').forEach(t => t.classList.toggle('active', t.dataset.tab === TAB));
+  document.getElementById('panel-kr').classList.toggle('is-hidden', TAB !== 'kr');
+  document.getElementById('panel-us').classList.toggle('is-hidden', TAB !== 'us');
+  document.getElementById('step2-sub').textContent = TAB === 'kr'
+    ? '매수가·매도가·수량과 수수료율을 넣으세요. 시장을 고르면 증권거래세가 자동으로 붙습니다.'
+    : '달러 가격과 환율, 수수료·환전 조건을 넣으세요. SEC fee는 팔 때만 붙습니다.';
+}
+function rerender() { updateDisplays(); placeUnits(); render(); }
+
+function bindEvents() {
+  ['bp', 'sp', 'q', 'd', 'fb', 'fs', 'ubp', 'usp', 'uq', 'fxb', 'fxs', 'ufb', 'ufs', 'fx', 'sec', 'taf', 'n', 'r'].forEach(id =>
+    document.getElementById(id).addEventListener('input', rerender));
+  document.querySelectorAll('.chips[data-target]').forEach(box => box.addEventListener('click', e => {
+    const ch = e.target.closest('.chip'); if (!ch) return;
+    document.getElementById(box.dataset.target).value = ch.dataset.v;
+    rerender();
+  }));
+  document.getElementById('market-chips').addEventListener('click', e => {
+    const ch = e.target.closest('.chip'); if (!ch) return;
+    MARKET = ch.dataset.m; rerender();
+  });
+  document.getElementById('fxu-chips').addEventListener('click', e => {
+    const ch = e.target.closest('.chip'); if (!ch || ch.dataset.u === FXU) return;
+    const fxEl = document.getElementById('fx');
+    const cur = parseFloat(fxEl.value), ref = parseFloat(document.getElementById('fxb').value) || 1400;
+    FXU = ch.dataset.u;
+    if (isFinite(cur)) fxEl.value = FXU === 'won' ? String(Math.round(ref * cur / 100 * 100) / 100) : String(Math.round(cur / ref * 100 * 10000) / 10000);
+    rerender();
+  });
+  document.querySelectorAll('.mode-tab').forEach(t => t.addEventListener('click', () => {
+    TAB = t.dataset.tab; applyTab(); rerender();
+  }));
+  document.getElementById('copy-link').addEventListener('click', copyLink);
+  document.getElementById('copy-result').addEventListener('click', copyResult);
+  let rt; window.addEventListener('resize', () => { clearTimeout(rt); rt = setTimeout(() => { placeUnits(); render(); }, 200); });
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(placeUnits);
+}
+
+window.addEventListener('DOMContentLoaded', () => {
+  readUrl();
+  applyTab();
+  bindEvents();
+  rerender();
+});
+</script>
+</body>
+</html>
