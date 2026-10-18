@@ -1158,7 +1158,7 @@ function renderKR(inp) {
   document.getElementById('cost-body').innerHTML = html;
 
   document.getElementById('be-box').innerHTML = be
-    ? `<b>본전 매도가</b> <span class="be-num">${won(be.price)}</span> — 이 가격 이상에 팔아야 수수료와 세금을 다 내고도 손해가 없습니다. 비용만 정확히 메우는 가격은 ${be.raw.toLocaleString(undefined, { maximumFractionDigits: 1 })}원이고, ${etf ? 'ETF·ETN 호가 단위(2,000원 미만 1원·이상 5원)' : '2023년 통합 호가가격단위'}로 올렸습니다. 사자마자 팔면 <b>${won(R.cost - (R.sellAmt - R.buyAmt) + krCalc(inp, { sp: inp.bp }).cost - R.cost + (R.sellAmt - R.buyAmt) - (R.sellAmt - R.buyAmt))}</b> 손해로 시작하는 셈입니다.`
+    ? `<b>본전 매도가</b> <span class="be-num">${won(be.price)}</span> — 이 가격 이상에 팔아야 수수료와 세금을 다 내고도 손해가 없습니다. 비용만 정확히 메우는 가격은 ${be.raw.toLocaleString(undefined, { maximumFractionDigits: 1 })}원이고, ${etf ? 'ETF·ETN 호가 단위(2,000원 미만 1원·이상 5원)' : '2023년 통합 호가가격단위'}로 올렸습니다. 사자마자 팔면 <b>${won(krCalc(inp, { sp: inp.bp }).cost)}</b> 손해로 시작하는 셈입니다.`
     : '-';
   document.getElementById('us-tax-note').style.display = 'none';
 
