@@ -9,6 +9,7 @@
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css">
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script src="https://ttokjaetv.github.io/rules/v2026.1/rules.js"></script>
+<script src="https://ttokjaetv.github.io/rules/fill-v1.js"></script>
 <style>
   :root {
     --bg: #F5EFE6;
@@ -621,7 +622,7 @@
               </div>
             </div>
           </div>
-          <div class="input-hint" style="margin-top:2px;margin-bottom:16px;">SEC fee 기본값 <b>$20.60/100만 달러(0.00206%)</b>는 2026년 4월 4일부터 적용 중인 요율, TAF <b>$0.000195/주(거래당 최대 $9.79)</b>는 2026년 1월 1일 기준입니다(2026년 10월 확인). 요율이 자주 바뀌니 증권사 안내와 다르면 고쳐 넣으세요. 증권사가 따로 받지 않으면 0.</div>
+          <div class="input-hint" style="margin-top:2px;margin-bottom:16px;">SEC fee 기본값 <b>$<span data-rule="TRADE.secFeePerMillionUsd" data-fmt="f2">20.60</span>/100만 달러(<span data-rule="TRADE.secFeePerMillionUsd/1e4">0.00206</span>%)</b>는 2026년 4월 4일부터 적용 중인 요율, TAF <b>$<span data-rule="TRADE.tafPerShareUsd">0.000195</span>/주(거래당 최대 $<span data-rule="TRADE.tafMaxUsd" data-fmt="f2">9.79</span>)</b>는 2026년 1월 1일 기준입니다(2026년 10월 확인). 요율이 자주 바뀌니 증권사 안내와 다르면 고쳐 넣으세요. 증권사가 따로 받지 않으면 0.</div>
         </div>
       </div>
     </div>
@@ -686,7 +687,7 @@
       </table>
     </div>
     <div class="be-box" id="be-box">-</div>
-    <p class="input-hint" id="us-tax-note" style="margin-top:12px;">해외주식 양도소득세(1년 동안의 해외주식 매매차익에서 250만원 공제 후 22%)는 여기 포함하지 않았습니다. 해외주식 양도세는 <a href="https://ttokjaetv.github.io/overseas-stock-tax/" target="_blank" rel="noopener" class="link-inline">해외주식 양도세 계산기</a>에서 따로 계산해 보세요.</p>
+    <p class="input-hint" id="us-tax-note" style="margin-top:12px;">해외주식 양도소득세(1년 동안의 해외주식 매매차익에서 <span data-rule="OVERSEAS_STOCK.basicDeduction/1e4">250</span>만원 공제 후 <span data-rule="OVERSEAS_STOCK.rate*100">22</span>%)는 여기 포함하지 않았습니다. 해외주식 양도세는 <a href="https://ttokjaetv.github.io/overseas-stock-tax/" target="_blank" rel="noopener" class="link-inline">해외주식 양도세 계산기</a>에서 따로 계산해 보세요.</p>
   </div>
 
   <div class="card" data-member="수수료율 비교 표">
@@ -769,11 +770,11 @@
       <table class="data-table rate-table">
         <thead><tr><th>시장</th><th>증권거래세</th><th>농어촌특별세</th><th>매도 시 합계</th></tr></thead>
         <tbody>
-          <tr><td>코스피</td><td>0.05%</td><td>0.15%</td><td class="c-accent">0.20%</td></tr>
-          <tr><td>코스닥</td><td>0.20%</td><td>없음</td><td class="c-accent">0.20%</td></tr>
-          <tr><td>코넥스</td><td>0.10%</td><td>없음</td><td class="c-accent">0.10%</td></tr>
+          <tr><td>코스피</td><td><span data-rule="TRADE.securitiesTransactionTax.kospi.stt*100" data-fmt="f2">0.05</span>%</td><td><span data-rule="TRADE.securitiesTransactionTax.kospi.rural*100" data-fmt="f2">0.15</span>%</td><td class="c-accent"><span data-rule="(TRADE.securitiesTransactionTax.kospi.stt+TRADE.securitiesTransactionTax.kospi.rural)*100" data-fmt="f2">0.20</span>%</td></tr>
+          <tr><td>코스닥</td><td><span data-rule="TRADE.securitiesTransactionTax.kosdaq.stt*100" data-fmt="f2">0.20</span>%</td><td>없음</td><td class="c-accent"><span data-rule="(TRADE.securitiesTransactionTax.kosdaq.stt+TRADE.securitiesTransactionTax.kosdaq.rural)*100" data-fmt="f2">0.20</span>%</td></tr>
+          <tr><td>코넥스</td><td><span data-rule="TRADE.securitiesTransactionTax.konex.stt*100" data-fmt="f2">0.10</span>%</td><td>없음</td><td class="c-accent"><span data-rule="(TRADE.securitiesTransactionTax.konex.stt+TRADE.securitiesTransactionTax.konex.rural)*100" data-fmt="f2">0.10</span>%</td></tr>
           <tr><td>K-OTC</td><td>0.20%</td><td>없음</td><td class="c-accent">0.20%</td></tr>
-          <tr><td>ETF·ETN·ELW</td><td>없음</td><td>없음</td><td class="c-green">0%</td></tr>
+          <tr><td>ETF·ETN·ELW</td><td>없음</td><td>없음</td><td class="c-green"><span data-rule="(TRADE.securitiesTransactionTax.etf.stt+TRADE.securitiesTransactionTax.etf.rural)*100">0</span>%</td></tr>
         </tbody>
       </table>
     </div>
@@ -789,14 +790,14 @@
       <table class="data-table rate-table">
         <thead><tr><th>주가(주식)</th><th>호가 단위</th><th>주가(주식)</th><th>호가 단위</th></tr></thead>
         <tbody>
-          <tr><td>2,000원 미만</td><td>1원</td><td>5만~20만원 미만</td><td>100원</td></tr>
-          <tr><td>2,000~5,000원 미만</td><td>5원</td><td>20만~50만원 미만</td><td>500원</td></tr>
-          <tr><td>5,000~2만원 미만</td><td>10원</td><td>50만원 이상</td><td>1,000원</td></tr>
-          <tr><td>2만~5만원 미만</td><td>50원</td><td>ETF·ETN</td><td>2,000원 미만 1원 · 이상 5원</td></tr>
+          <tr><td><span data-rule="TRADE.krxTick.0.0">2,000</span>원 미만</td><td><span data-rule="TRADE.krxTick.0.1">1</span>원</td><td><span data-rule="TRADE.krxTick.3.0/1e4">5</span>만~<span data-rule="TRADE.krxTick.4.0/1e4">20</span>만원 미만</td><td><span data-rule="TRADE.krxTick.4.1">100</span>원</td></tr>
+          <tr><td><span data-rule="TRADE.krxTick.0.0">2,000</span>~<span data-rule="TRADE.krxTick.1.0">5,000</span>원 미만</td><td><span data-rule="TRADE.krxTick.1.1">5</span>원</td><td><span data-rule="TRADE.krxTick.4.0/1e4">20</span>만~<span data-rule="TRADE.krxTick.5.0/1e4">50</span>만원 미만</td><td><span data-rule="TRADE.krxTick.5.1">500</span>원</td></tr>
+          <tr><td><span data-rule="TRADE.krxTick.1.0">5,000</span>~<span data-rule="TRADE.krxTick.2.0/1e4">2</span>만원 미만</td><td><span data-rule="TRADE.krxTick.2.1">10</span>원</td><td><span data-rule="TRADE.krxTick.5.0/1e4">50</span>만원 이상</td><td><span data-rule="TRADE.krxTick.6.1">1,000</span>원</td></tr>
+          <tr><td><span data-rule="TRADE.krxTick.2.0/1e4">2</span>만~<span data-rule="TRADE.krxTick.3.0/1e4">5</span>만원 미만</td><td><span data-rule="TRADE.krxTick.3.1">50</span>원</td><td>ETF·ETN</td><td><span data-rule="TRADE.krxEtfTick.0.0">2,000</span>원 미만 <span data-rule="TRADE.krxEtfTick.0.1">1</span>원 · 이상 <span data-rule="TRADE.krxEtfTick.1.1">5</span>원</td></tr>
         </tbody>
       </table>
     </div>
-    <p class="src-note">2023년 1월 25일부터 코스피·코스닥·코넥스 주식에 같은 호가 단위가 적용됩니다. 미국주식은 1달러 이상이면 1센트 단위로 올립니다.</p>
+    <p class="src-note">2023년 1월 25일부터 코스피·코스닥·코넥스 주식에 같은 호가 단위가 적용됩니다. 미국주식은 <span data-rule="TRADE.usTick.0.0">1</span>달러 이상이면 <span data-rule="TRADE.usTick.1.1*100">1</span>센트 단위로 올립니다.</p>
     <ul class="src-list">
       <li>한국거래소 호가가격단위 개편(2022-11-01 발표, 2023-01-25 시행) — 머니투데이방송 <a href="https://news.mtn.co.kr/news-detail/2022110114103274390" target="_blank" rel="noopener">기사 보기</a> · 구간표 정리 <a href="https://wikidocs.net/165194" target="_blank" rel="noopener">위키독스</a></li>
       <li>ETF: "현재 2000원 미만 ETF에는 1원 단위 호가가 적용" — 머니투데이방송, 2026-07-09 <a href="https://news.mtn.co.kr/news-detail/2026070916330218121" target="_blank" rel="noopener">기사 보기</a></li>
@@ -807,8 +808,8 @@
       <table class="data-table rate-table">
         <thead><tr><th>항목</th><th>요율</th><th>적용 시점</th></tr></thead>
         <tbody>
-          <tr><td>SEC fee (Section 31)</td><td>매도금액 100만 달러당 $20.60 (0.00206%)</td><td>2026-04-04 체결분부터 (직전 $0.00)</td></tr>
-          <tr><td>FINRA TAF</td><td>매도 1주당 $0.000195, 거래당 최대 $9.79</td><td>2026-01-01부터 (2027-01-01부터 $0.000232·최대 $11.61 예정)</td></tr>
+          <tr><td>SEC fee (Section 31)</td><td>매도금액 100만 달러당 $<span data-rule="TRADE.secFeePerMillionUsd" data-fmt="f2">20.60</span> (<span data-rule="TRADE.secFeePerMillionUsd/1e4">0.00206</span>%)</td><td>2026-04-04 체결분부터 (직전 $0.00)</td></tr>
+          <tr><td>FINRA TAF</td><td>매도 1주당 $<span data-rule="TRADE.tafPerShareUsd">0.000195</span>, 거래당 최대 $<span data-rule="TRADE.tafMaxUsd" data-fmt="f2">9.79</span></td><td>2026-01-01부터 (2027-01-01부터 $0.000232·최대 $11.61 예정)</td></tr>
         </tbody>
       </table>
     </div>
@@ -824,17 +825,17 @@
     <h3 class="chart-title">이렇게 계산했습니다</h3>
     <ul class="assume-list" style="margin-top:12px;">
       <li><b>수수료</b> = 매수금액(또는 매도금액) × 수수료율. 국내는 원 미만을 버리고, 미국은 센트 단위로 반올림했습니다.</li>
-      <li><b>증권거래세·농특세</b> = 매도금액 × 세율(원 미만 버림). 코스피는 거래세 0.05%와 농특세 0.15%를 따로 계산해 더합니다.</li>
+      <li><b>증권거래세·농특세</b> = 매도금액 × 세율(원 미만 버림). 코스피는 거래세 <span data-rule="TRADE.securitiesTransactionTax.kospi.stt*100" data-fmt="f2">0.05</span>%와 농특세 <span data-rule="TRADE.securitiesTransactionTax.kospi.rural*100" data-fmt="f2">0.15</span>%를 따로 계산해 더합니다.</li>
       <li><b>실제 수익률</b> = 비용 차감 손익 ÷ 실제로 들어간 돈(국내: 매수금액 + 매수 수수료 / 미국: 환전 비용까지 포함한 원화 투입액).</li>
       <li><b>연환산 수익률</b> = (1 + 실제 수익률)^(365 ÷ 보유일) − 1. 보유 기간이 짧으면 숫자가 크게 부풀려 보이니 참고만 하세요.</li>
-      <li><b>본전 매도가</b> = 수수료와 세금(미국은 환전·SEC fee·TAF까지)을 다 내고도 손실이 0원 이상이 되는 가장 낮은 매도가. 국내는 호가 단위로 올림, 미국은 매도 환율을 입력값 그대로 둔 1센트 단위 올림입니다.</li>
+      <li><b>본전 매도가</b> = 수수료와 세금(미국은 환전·SEC fee·TAF까지)을 다 내고도 손실이 0원 이상이 되는 가장 낮은 매도가. 국내는 호가 단위로 올림, 미국은 매도 환율을 입력값 그대로 둔 <span data-rule="TRADE.usTick.1.1*100">1</span>센트 단위 올림입니다.</li>
       <li><b>미국 원화 손익</b> = 원화로 받은 돈 − 원화로 낸 돈. 그중 <b>주가 손익</b> = 달러 손익 × 매도 환율, <b>환차손익</b> = 매수금액(달러) × (매도 환율 − 매수 환율)로 나눴고, 나머지가 비용입니다.</li>
-      <li><b>환전 수수료</b>: % 입력이면 살 때 매매기준율 × (1 + 수수료율), 팔 때 × (1 − 수수료율)로 환전한다고 봤습니다. SEC fee·TAF는 센트 단위 올림, TAF는 최소 $0.01·최대 $9.79(입력값 기준 최대치는 2026년 요율 고정)입니다.</li>
+      <li><b>환전 수수료</b>: % 입력이면 살 때 매매기준율 × (1 + 수수료율), 팔 때 × (1 − 수수료율)로 환전한다고 봤습니다. SEC fee·TAF는 센트 단위 올림, TAF는 최소 $<span data-rule="TRADE.tafMinUsd" data-fmt="f2">0.01</span>·최대 $<span data-rule="TRADE.tafMaxUsd" data-fmt="f2">9.79</span>(입력값 기준 최대치는 <span data-rule="meta.year" data-fmt="i">2026</span>년 요율 고정)입니다.</li>
       <li><b>연간 비용</b> = 이번 거래 1회 왕복 비용 × 1년 횟수(투자금 대비 %는 단순 합). 20년 그래프는 매년 (1 + 기대 수익률) × (1 − 1회 비용률)^횟수로 굴렸습니다.</li>
     </ul>
     <div class="assume-title">계산에 넣지 않은 것</div>
     <ul class="assume-list">
-      <li>매매차익·분배금에 붙는 세금 — 국내 대주주 양도소득세, 국내상장 해외 ETF 매매차익의 배당소득세(15.4%), 해외주식 양도소득세(250만원 공제 후 22%), 금융소득종합과세</li>
+      <li>매매차익·분배금에 붙는 세금 — 국내 대주주 양도소득세, 국내상장 해외 ETF 매매차익의 배당소득세(<span data-rule="FIN_INCOME.withholdingWithLocal*100">15.4</span>%), 해외주식 양도소득세(<span data-rule="OVERSEAS_STOCK.basicDeduction/1e4">250</span>만원 공제 후 <span data-rule="OVERSEAS_STOCK.rate*100">22</span>%), 금융소득종합과세</li>
       <li>증권사별 최소 수수료·정액 수수료, 유관기관 제비용이 수수료율과 별도인 경우의 추가분</li>
       <li>사고팔 때 호가 차이로 생기는 체결 손해(스프레드·슬리피지), 미국주식 환전 시점 차이</li>
       <li>ISA·연금저축·IRP 등 절세 계좌의 세금 혜택, ADR 수수료 등 종목별 특수 비용</li>
