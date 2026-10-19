@@ -8,6 +8,7 @@
 <meta name="description" content="국내주식·ETF와 미국주식을 한 번 사고팔 때 드는 수수료·증권거래세·환전비용·SEC fee를 계산하고, 비용을 뺀 실제 수익률과 본전 매도가, 1년에 여러 번 사고팔 때의 연간 비용까지 보여드립니다.">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css">
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script src="https://ttokjaetv.github.io/rules/v2026.1/rules.js"></script>
 <style>
   :root {
     --bg: #F5EFE6;
@@ -610,13 +611,13 @@
             <div class="input-group">
               <label class="label" for="sec">SEC fee (100만 달러당)</label>
               <div class="input-wrap">
-                <input type="number" id="sec" data-unit="달러" value="20.6" step="any" min="0" inputmode="decimal">
+                <input type="number" id="sec" data-unit="달러" step="any" min="0" inputmode="decimal">
               </div>
             </div>
             <div class="input-group">
               <label class="label" for="taf">FINRA TAF (1주당)</label>
               <div class="input-wrap">
-                <input type="number" id="taf" data-unit="달러" value="0.000195" step="any" min="0" inputmode="decimal">
+                <input type="number" id="taf" data-unit="달러" step="any" min="0" inputmode="decimal">
               </div>
             </div>
           </div>
@@ -849,6 +850,12 @@
 </div>
 
 <script>
+if (!window.TTOKJAE_RULES) {
+  var TJR_MSG = '기준값 파일(rules.js)을 불러오지 못했습니다. 인터넷 연결을 확인한 뒤 새로고침해 주세요.';
+  var tjrShow = function () { document.body.insertAdjacentHTML('afterbegin', '<div role="alert" style="background:#fdecea;color:#b3261e;padding:12px 16px;text-align:center;font-weight:600">' + TJR_MSG + '</div>'); };
+  document.body ? tjrShow() : document.addEventListener('DOMContentLoaded', tjrShow);
+  throw new Error(TJR_MSG);
+}
 // ============== 표 내려받기 (CSV · 엑셀 .xlsx) — 외부 라이브러리 없이 동작 ==============
 // TJX.csv('파일이름', rows) · TJX.xlsx('파일이름', [{ name: '시트', rows, widths }])
 // rows = [[머리글...], [값...], ...]  숫자는 숫자 그대로 넣으면 엑셀에서 계산 가능한 숫자 칸이 됩니다
@@ -929,21 +936,32 @@ const TJX = (() => {
   };
 })();
 
-// ============== 기준 수치 (2026년 10월 확인) ==============
-const KR_TAX = {   // 2026-01-01 양도분부터
-  kospi:  { stt: 0.0005, rural: 0.0015, label: '코스피' },
-  kosdaq: { stt: 0.0020, rural: 0,      label: '코스닥' },
-  etf:    { stt: 0,      rural: 0,      label: 'ETF·ETN' },
+// ============== 기준 수치 (공용 기준 파일 rules.js의 TTOKJAE_RULES) ==============
+const TR = TTOKJAE_RULES;
+const TT = TR.TRADE, STT = TT.securitiesTransactionTax, OSR = TR.OVERSEAS_STOCK;
+const KR_TAX = {   // 증권거래세(stt) + 농어촌특별세(rural)
+  kospi:  { stt: STT.kospi.stt,  rural: STT.kospi.rural,  label: '코스피' },
+  kosdaq: { stt: STT.kosdaq.stt, rural: STT.kosdaq.rural, label: '코스닥' },
+  etf:    { stt: STT.etf.stt,    rural: STT.etf.rural,    label: 'ETF·ETN' },
 };
-const TAF_MAX = 9.79;          // FINRA TAF 거래당 최대 (2026-01-01~)
+const TAF_MAX = TT.tafMaxUsd;    // FINRA TAF 거래당 최대
+const TAF_MIN = TT.tafMinUsd;    // 센트 올림 → 최소
 const CMP_RATES = [0.015, 0.1, 0.25];
 const FREQS = [1, 4, 12, 24, 52];
 const YEARS = 20;
 const DEF = {
   tab: 'kr', m: 'kospi', bp: 50000, sp: 55000, q: 100, d: 90, fb: 0.015, fs: 0.015,
-  ubp: 100, usp: 110, uq: 20, fxb: 1380, fxs: 1400, ufb: 0.25, ufs: 0.25, fxu: 'pct', fx: 0.1, sec: 20.6, taf: 0.000195,
+  ubp: 100, usp: 110, uq: 20, fxb: 1380, fxs: 1400, ufb: 0.25, ufs: 0.25, fxu: 'pct', fx: 0.1, sec: TT.secFeePerMillionUsd, taf: TT.tafPerShareUsd,
   n: 12, r: 7,
 };
+// SEC fee·TAF 입력칸 기본값은 rules.js 값으로 채운다
+['sec', 'taf'].forEach(id => { document.getElementById(id).defaultValue = String(DEF[id]); });
+// 설명 문구용 표기
+const sttPct = v => (v * 100).toFixed(2) + '%';                        // 0.0005 → '0.05%'
+const lawPct = v => +(v * 100).toFixed(6) + '%';                      // 0.22 → '22%'
+const manWon = v => (v / 1e4).toLocaleString('en-US') + '만원';        // 2500000 → '250만원'
+const KOSPI_STT_TXT = `${sttPct(KR_TAX.kospi.stt + KR_TAX.kospi.rural)}(코스피는 거래세 ${sttPct(KR_TAX.kospi.stt)} + 농특세 ${sttPct(KR_TAX.kospi.rural)})`;
+const ETF_TICK_TXT = `${TT.krxEtfTick[0][0].toLocaleString('en-US')}원 미만 ${TT.krxEtfTick[0][1]}원·이상 ${TT.krxEtfTick[1][1]}원`;
 let TAB = 'kr', MARKET = 'kospi', FXU = 'pct';
 let longChart = null, lastExport = null, lastCopy = '';
 
@@ -994,16 +1012,14 @@ function readInputs() {
 }
 
 // ============== 국내 계산 ==============
-// 2023-01-25~ 코스피·코스닥·코넥스 통합 호가가격단위 / ETF·ETN: 2,000원 미만 1원, 이상 5원
+// 호가가격단위 표 [상한, 호가]: '가격 < 상한'인 첫 행 (어느 행에도 안 걸리면 마지막 행)
+function tickOf(table, p) {
+  for (const [lim, tick] of table) if (p < lim) return tick;
+  return table[table.length - 1][1];
+}
+// 2023-01-25~ 코스피·코스닥·코넥스 통합 호가가격단위(TRADE.krxTick) / ETF·ETN(TRADE.krxEtfTick)
 function krTick(p, m) {
-  if (m === 'etf') return p < 2000 ? 1 : 5;
-  if (p < 2000) return 1;
-  if (p < 5000) return 5;
-  if (p < 20000) return 10;
-  if (p < 50000) return 50;
-  if (p < 200000) return 100;
-  if (p < 500000) return 500;
-  return 1000;
+  return tickOf(m === 'etf' ? TT.krxEtfTick : TT.krxTick, p);
 }
 function krCalc(i, over = {}) {
   const x = { ...i, ...over };
@@ -1046,7 +1062,7 @@ function usCalc(i, over = {}) {
   const buyAmt = x.ubp * x.uq, sellAmt = x.usp * x.uq;
   const buyFee = r2(buyAmt * x.ufb / 100), sellFee = r2(sellAmt * x.ufs / 100);
   const sec = x.sec > 0 && sellAmt > 0 ? ceilCent(sellAmt * x.sec / 1e6) : 0;
-  const taf = x.taf > 0 && x.uq > 0 && sellAmt > 0 ? Math.min(TAF_MAX, Math.max(0.01, ceilCent(x.uq * x.taf))) : 0;
+  const taf = x.taf > 0 && x.uq > 0 && sellAmt > 0 ? Math.min(TAF_MAX, Math.max(TAF_MIN, ceilCent(x.uq * x.taf))) : 0;
   const usdOut = buyAmt + buyFee;
   const usdIn = sellAmt - sellFee - sec - taf;
   const pct = x.fxu === 'pct';
@@ -1071,9 +1087,9 @@ function usBreakeven(i, over = {}) {
   const base = usCalc(x);
   const k = 1 - x.ufs / 100 - x.sec / 1e6;
   if (x.uq <= 0 || k <= 0 || base.effS <= 0) return null;
-  const tafGuess = x.taf > 0 ? Math.min(TAF_MAX, Math.max(0.01, ceilCent(x.uq * x.taf))) : 0;
+  const tafGuess = x.taf > 0 ? Math.min(TAF_MAX, Math.max(TAF_MIN, ceilCent(x.uq * x.taf))) : 0;
   const raw = (base.krwOut / base.effS + tafGuess) / (x.uq * k);
-  const step = raw < 1 ? 0.0001 : 0.01;
+  const step = tickOf(TT.usTick, raw);   // 미국 호가: $1 미만·이상 (TRADE.usTick)
   const netAt = p => usCalc(x, { usp: p }).krwPL;
   let p = Math.ceil(raw / step - 1e-7) * step;
   for (let g = 0; g < 50 && p - step > 0 && netAt(p - step) >= 0; g++) p -= step;
@@ -1146,10 +1162,10 @@ function renderKR(inp) {
   html += row('매도 수수료', won(R.sellFee), `매도금액 × ${rateTxt(inp.fs)}`);
   if (etf) html += row('증권거래세', '0원', 'ETF·ETN은 팔 때 증권거래세 없음');
   else if (inp.m === 'kospi') {
-    html += row('증권거래세 + 농특세', won(R.tax), '매도금액 × 0.20%');
-    html += row('└ 증권거래세', won(R.stt), '매도금액 × 0.05%', 'sub');
-    html += row('└ 농어촌특별세', won(R.rural), '매도금액 × 0.15%', 'sub');
-  } else html += row('증권거래세', won(R.tax), '매도금액 × 0.20% (농특세 없음)');
+    html += row('증권거래세 + 농특세', won(R.tax), `매도금액 × ${sttPct(t.stt + t.rural)}`);
+    html += row('└ 증권거래세', won(R.stt), `매도금액 × ${sttPct(t.stt)}`, 'sub');
+    html += row('└ 농어촌특별세', won(R.rural), `매도금액 × ${sttPct(t.rural)}`, 'sub');
+  } else html += row('증권거래세', won(R.tax), `매도금액 × ${sttPct(t.stt + t.rural)} (농특세 없음)`);
   html += row('총 거래비용', won(R.cost), `매수금액의 ${pctN(R.c1, 3)}`, 'total');
   html += row('세전 손익', wonS(R.gross), '매도금액 − 매수금액');
   html += row('비용 차감 손익', wonS(R.net), '세전 손익 − 총 거래비용', 'total');
@@ -1158,7 +1174,7 @@ function renderKR(inp) {
   document.getElementById('cost-body').innerHTML = html;
 
   document.getElementById('be-box').innerHTML = be
-    ? `<b>본전 매도가</b> <span class="be-num">${won(be.price)}</span> — 이 가격 이상에 팔아야 수수료와 세금을 다 내고도 손해가 없습니다. 비용만 정확히 메우는 가격은 ${be.raw.toLocaleString(undefined, { maximumFractionDigits: 1 })}원이고, ${etf ? 'ETF·ETN 호가 단위(2,000원 미만 1원·이상 5원)' : '2023년 통합 호가가격단위'}로 올렸습니다. 사자마자 팔면 <b>${won(krCalc(inp, { sp: inp.bp }).cost)}</b> 손해로 시작하는 셈입니다.`
+    ? `<b>본전 매도가</b> <span class="be-num">${won(be.price)}</span> — 이 가격 이상에 팔아야 수수료와 세금을 다 내고도 손해가 없습니다. 비용만 정확히 메우는 가격은 ${be.raw.toLocaleString(undefined, { maximumFractionDigits: 1 })}원이고, ${etf ? `ETF·ETN 호가 단위(${ETF_TICK_TXT})` : '2023년 통합 호가가격단위'}로 올렸습니다. 사자마자 팔면 <b>${won(krCalc(inp, { sp: inp.bp }).cost)}</b> 손해로 시작하는 셈입니다.`
     : '-';
   document.getElementById('us-tax-note').style.display = 'none';
 
@@ -1181,7 +1197,7 @@ function renderKR(inp) {
   const altName = etf ? '코스피 주식이었다면' : 'ETF였다면';
   const freqs = FREQS.includes(inp.n) || inp.n === 0 ? FREQS.slice() : [...FREQS, inp.n].sort((a, b) => a - b);
   document.getElementById('freq-title').textContent = `1년에 여러 번 사고팔면?`;
-  document.getElementById('freq-subtitle').textContent = `이번 거래(1회 왕복 비용 ${won(R.cost)}, 매수금액의 ${pctN(R.c1, 3)})를 1년에 여러 번 반복할 때입니다. 오른쪽은 같은 수수료로 ${etf ? '코스피 주식(거래세 0.20%)' : 'ETF(거래세 면제)'}를 사고팔았다면입니다.`;
+  document.getElementById('freq-subtitle').textContent = `이번 거래(1회 왕복 비용 ${won(R.cost)}, 매수금액의 ${pctN(R.c1, 3)})를 1년에 여러 번 반복할 때입니다. 오른쪽은 같은 수수료로 ${etf ? `코스피 주식(거래세 ${sttPct(KR_TAX.kospi.stt + KR_TAX.kospi.rural)})` : 'ETF(거래세 면제)'}를 사고팔았다면입니다.`;
   document.getElementById('freq-head').innerHTML = `<tr><th>1년 왕복 횟수</th><th>연간 비용</th><th>투자금 대비</th><th>${altName}</th></tr>`;
   const freqRows = freqs.map(f => ({ f, cost: R.cost * f, pct: R.c1 * f, alt: alt.c1 * f, altCost: alt.cost * f }));
   document.getElementById('freq-body').innerHTML = freqRows.map(z => `<tr${z.f === inp.n ? ' class="highlight-row"' : ''}>
@@ -1308,7 +1324,7 @@ function renderUS(inp) {
     `실제 원화 수익률 ${pctS(U.ret)}`,
     be ? `본전 매도가 ${usdPrice(be.price)} (매도 환율 ${inp.fxs.toLocaleString()}원 기준)` : '',
     inp.n > 0 ? `1년 ${inp.n}번 왕복 시 연 비용 약 ${won(U.cost * inp.n)} (투자금의 ${pctN(U.c1 * inp.n)})` : '',
-    '※ 해외주식 양도소득세(250만원 공제 후 22%) 별도',
+    `※ 해외주식 양도소득세(${manWon(OSR.basicDeduction)} 공제 후 ${lawPct(OSR.rate)}) 별도`,
   ].filter(Boolean).join('\n');
 }
 
@@ -1416,7 +1432,7 @@ function renderInsightKR(inp, R, alt) {
   d.innerHTML =
     `지금 조건(${KR_TAX[inp.m].label}, 수수료 ${rateTxt(inp.fb)}/${rateTxt(inp.fs)})으로 한 번 사고팔 때 비용은 매수금액의 <strong>${pctN(R.c1, 3)}</strong>. 작아 보여도 매달 한 번씩 사고팔면 1년에 <strong>${pctN(yr)}</strong>가 빠져나갑니다.` +
     (share !== null ? ` 기대 수익률이 연 ${inp.r}%라면 그중 <strong>${pctN(Math.min(share, 9.99), 0)}</strong>를 비용이 가져가는 셈입니다.` : '') +
-    ` 국내 주식은 팔 때마다 증권거래세 0.20%(코스피는 거래세 0.05% + 농특세 0.15%)가 붙지만, <strong>ETF는 증권거래세가 면제</strong>라 같은 수수료로 12번 왕복해도 <strong>${pctN(etfC1 * n12)}</strong>입니다(주식이면 ${pctN(stockC1 * n12)}). 장기 투자에서 비용을 줄이는 순서는 ① 덜 사고팔기 ② 거래세 없는 ETF 활용 ③ 수수료 싼 곳 고르기입니다.`;
+    ` 국내 주식은 팔 때마다 증권거래세 ${KOSPI_STT_TXT}가 붙지만, <strong>ETF는 증권거래세가 면제</strong>라 같은 수수료로 12번 왕복해도 <strong>${pctN(etfC1 * n12)}</strong>입니다(주식이면 ${pctN(stockC1 * n12)}). 장기 투자에서 비용을 줄이는 순서는 ① 덜 사고팔기 ② 거래세 없는 ETF 활용 ③ 수수료 싼 곳 고르기입니다.`;
 }
 function renderInsightUS(inp, U, noFx) {
   const t = document.getElementById('insight-title'), d = document.getElementById('insight-desc');
@@ -1425,9 +1441,9 @@ function renderInsightUS(inp, U, noFx) {
   const feeShare = U.cost > 0 ? (U.c.buyFee + U.c.sellFee) / U.cost : 0;
   t.textContent = `미국주식 1년 12번 왕복이면 비용만 ${pctN(yr)}입니다`;
   d.innerHTML =
-    `한 번 사고팔 때 비용은 원화 투입액의 <strong>${pctN(U.c1, 3)}</strong>이고, 그중 수수료가 ${pctN(feeShare, 0)}, 환전 비용이 ${pctN(fxShare, 0)}입니다. SEC fee는 0.00206%라 금액은 작습니다.` +
+    `한 번 사고팔 때 비용은 원화 투입액의 <strong>${pctN(U.c1, 3)}</strong>이고, 그중 수수료가 ${pctN(feeShare, 0)}, 환전 비용이 ${pctN(fxShare, 0)}입니다. SEC fee는 ${+(TT.secFeePerMillionUsd / 1e4).toFixed(8)}%라 금액은 작습니다.` +
     ` 매달 사고팔면 1년에 <strong>${pctN(yr)}</strong>, 환전 없이 달러로만 굴려도 <strong>${pctN(noFx.c1 * 12)}</strong>입니다.` +
-    ` 미국주식은 국내 주식보다 수수료율이 높은 경우가 많아 잦은 매매의 부담이 더 큽니다. 여기에 1년 매매차익이 250만원을 넘으면 <strong>해외주식 양도세 22%</strong>가 따로 붙으니, 국내상장 해외 ETF(팔 때 거래세 면제, 대신 매매차익에 배당소득세 15.4%)와 비교해 보는 것도 방법입니다.`;
+    ` 미국주식은 국내 주식보다 수수료율이 높은 경우가 많아 잦은 매매의 부담이 더 큽니다. 여기에 1년 매매차익이 ${manWon(OSR.basicDeduction)}을 넘으면 <strong>해외주식 양도세 ${lawPct(OSR.rate)}</strong>가 따로 붙으니, 국내상장 해외 ETF(팔 때 거래세 면제, 대신 매매차익에 배당소득세 ${lawPct(TR.FIN_INCOME.withholdingWithLocal)})와 비교해 보는 것도 방법입니다.`;
 }
 
 // ============== 표 내려받기 ==============
@@ -1544,7 +1560,7 @@ function updateDisplays() {
   document.getElementById('fx-hint').textContent = FXU === 'pct'
     ? '환전 스프레드 1%에 환율 우대 90%면 0.1%입니다. 증권사 앱의 \'환전 우대율\'을 확인하세요.'
     : '살 때는 매매기준율보다 이만큼 비싸게, 팔 때는 이만큼 싸게 환전한다고 봅니다(예: 스프레드 1% × 우대 90% ≈ 1달러당 1.4원).';
-  const mh = { kospi: '팔 때 증권거래세 0.05% + 농어촌특별세 0.15% = 0.20% (2026년부터)', kosdaq: '팔 때 증권거래세 0.20%, 농특세 없음 (2026년부터)', etf: 'ETF·ETN은 팔 때 증권거래세가 없습니다. 수수료만 계산합니다' };
+  const mh = { kospi: `팔 때 증권거래세 ${sttPct(KR_TAX.kospi.stt)} + 농어촌특별세 ${sttPct(KR_TAX.kospi.rural)} = ${sttPct(KR_TAX.kospi.stt + KR_TAX.kospi.rural)} (2026년부터)`, kosdaq: `팔 때 증권거래세 ${sttPct(KR_TAX.kosdaq.stt)}, 농특세 없음 (2026년부터)`, etf: 'ETF·ETN은 팔 때 증권거래세가 없습니다. 수수료만 계산합니다' };
   document.getElementById('market-hint').textContent = mh[MARKET];
 }
 function applyTab() {
