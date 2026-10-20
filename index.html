@@ -1242,7 +1242,7 @@ function renderUS(inp) {
   document.getElementById('verdict-label').textContent = '미국주식';
   document.getElementById('verdict-main').innerHTML = `원화로 따지면 <span class="hl">${wonS(U.krwPL)}</span>, 실제 수익률 <span class="hl">${pctS(U.ret)}</span>입니다`;
   document.getElementById('verdict-sub').innerHTML =
-    `달러로는 ${usdS(U.usdGross)}(${pctS(U.usdGross / U.buyAmt)})이지만, 수수료·환전·SEC fee 등 비용이 <strong>${won(U.cost)}</strong> 들고 환율 변동으로 <strong>${wonS(U.fxPL)}</strong>가 더해졌습니다.` +
+    `달러로는 ${usdS(U.usdGross)}(${pctS(U.usdGross / U.buyAmt)})이지만, 수수료·환전·SEC fee 등 비용이 <strong>${won(U.cost)}</strong> 들고 환율 변동으로 <strong>${wonS(U.fxPL)}</strong>이 더해졌습니다.` +
     (inp.n > 0 ? ` 이런 거래를 1년에 ${inp.n}번 하면 비용만 약 <strong>${won(U.cost * inp.n)}</strong>(투자금의 ${pctN(annualPct)})입니다.` : '');
 
   setStat(1, '총 거래비용 (원화)', won(U.cost), `원화 투입액의 ${pctN(U.c1, 3)}`);
@@ -1427,26 +1427,29 @@ function drawLong(inp, P, c1, altC1, altShort) {
 function renderInsightKR(inp, R, alt) {
   const t = document.getElementById('insight-title'), d = document.getElementById('insight-desc');
   const etf = inp.m === 'etf';
-  const n12 = 12;
+  // 입력한 1년 왕복 횟수 기준 (0회면 매달 12회를 예로 듦)
+  const n12 = inp.n > 0 ? inp.n : 12;
   const yr = R.c1 * n12;
   const stockC1 = etf ? alt.c1 : R.c1, etfC1 = etf ? R.c1 : alt.c1;
   const share = inp.r > 0 ? yr / (inp.r / 100) : null;
-  t.textContent = `1년 12번 왕복이면 비용만 투자금의 ${pctN(yr)}입니다`;
+  t.textContent = `1년 ${n12}번 왕복이면 비용만 투자금의 ${pctN(yr)}입니다`;
   d.innerHTML =
-    `지금 조건(${KR_TAX[inp.m].label}, 수수료 ${rateTxt(inp.fb)}/${rateTxt(inp.fs)})으로 한 번 사고팔 때 비용은 매수금액의 <strong>${pctN(R.c1, 3)}</strong>. 작아 보여도 매달 한 번씩 사고팔면 1년에 <strong>${pctN(yr)}</strong>가 빠져나갑니다.` +
+    `지금 조건(${KR_TAX[inp.m].label}, 수수료 ${rateTxt(inp.fb)}/${rateTxt(inp.fs)})으로 한 번 사고팔 때 비용은 매수금액의 <strong>${pctN(R.c1, 3)}</strong>. 작아 보여도 ${n12 === 12 ? '매달 한 번씩 사고팔면 1년에' : `1년에 ${n12}번 사고팔면`} <strong>${pctN(yr)}</strong>가 빠져나갑니다.` +
     (share !== null ? ` 기대 수익률이 연 ${inp.r}%라면 그중 <strong>${pctN(Math.min(share, 9.99), 0)}</strong>를 비용이 가져가는 셈입니다.` : '') +
     (inp.m === 'konex' ? ` 코넥스 주식은 팔 때마다 증권거래세 ${sttPct(KR_TAX.konex.stt + KR_TAX.konex.rural)}가 붙지만,` : ` 국내 주식은 팔 때마다 증권거래세 ${KOSPI_STT_TXT}가 붙지만,`) +
-    ` <strong>ETF는 증권거래세가 면제</strong>라 같은 수수료로 12번 왕복해도 <strong>${pctN(etfC1 * n12)}</strong>입니다(주식이면 ${pctN(stockC1 * n12)}). 장기 투자에서 비용을 줄이는 순서는 ① 덜 사고팔기 ② 거래세 없는 ETF 활용 ③ 수수료 싼 곳 고르기입니다.`;
+    ` <strong>ETF는 증권거래세가 면제</strong>라 같은 수수료로 ${n12}번 왕복해도 <strong>${pctN(etfC1 * n12)}</strong>입니다(주식이면 ${pctN(stockC1 * n12)}). 장기 투자에서 비용을 줄이는 순서는 ① 덜 사고팔기 ② 거래세 없는 ETF 활용 ③ 수수료 싼 곳 고르기입니다.`;
 }
 function renderInsightUS(inp, U, noFx) {
   const t = document.getElementById('insight-title'), d = document.getElementById('insight-desc');
-  const yr = U.c1 * 12;
+  // 입력한 1년 왕복 횟수 기준 (0회면 매달 12회를 예로 듦)
+  const n12 = inp.n > 0 ? inp.n : 12;
+  const yr = U.c1 * n12;
   const fxShare = U.cost > 0 ? (U.c.fxB + U.c.fxS) / U.cost : 0;
   const feeShare = U.cost > 0 ? (U.c.buyFee + U.c.sellFee) / U.cost : 0;
-  t.textContent = `미국주식 1년 12번 왕복이면 비용만 ${pctN(yr)}입니다`;
+  t.textContent = `미국주식 1년 ${n12}번 왕복이면 비용만 ${pctN(yr)}입니다`;
   d.innerHTML =
-    `한 번 사고팔 때 비용은 원화 투입액의 <strong>${pctN(U.c1, 3)}</strong>이고, 그중 수수료가 ${pctN(feeShare, 0)}, 환전 비용이 ${pctN(fxShare, 0)}입니다. SEC fee는 ${+(TT.secFeePerMillionUsd / 1e4).toFixed(8)}%라 금액은 작습니다.` +
-    ` 매달 사고팔면 1년에 <strong>${pctN(yr)}</strong>, 환전 없이 달러로만 굴려도 <strong>${pctN(noFx.c1 * 12)}</strong>입니다.` +
+    `한 번 사고팔 때 비용은 원화 투입액의 <strong>${pctN(U.c1, 3)}</strong>이고, 그중 수수료가 ${pctN(feeShare, 0)}, 환전 비용이 ${pctN(fxShare, 0)}입니다.${inp.sec > 0 ? ` SEC fee는 ${+(inp.sec / 1e4).toFixed(8)}%라 금액은 작습니다.` : ''}` +   // SEC fee 0이면 문장 생략
+    ` ${n12 === 12 ? '매달 사고팔면 1년에' : `1년에 ${n12}번 사고팔면`} <strong>${pctN(yr)}</strong>, 환전 없이 달러로만 굴려도 <strong>${pctN(noFx.c1 * n12)}</strong>입니다.` +
     ` 미국주식은 국내 주식보다 수수료율이 높은 경우가 많아 잦은 매매의 부담이 더 큽니다. 여기에 1년 매매차익이 ${manWon(OSR.basicDeduction)}을 넘으면 <strong>해외주식 양도세 ${lawPct(OSR.rate)}</strong>가 따로 붙으니, 국내상장 해외 ETF(팔 때 거래세 면제, 대신 매매차익에 배당소득세 ${lawPct(TR.FIN_INCOME.withholdingWithLocal)})와 비교해 보는 것도 방법입니다.`;
 }
 
