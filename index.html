@@ -455,6 +455,7 @@
         <div class="seg" id="market-chips">
           <button class="chip on" type="button" data-m="kospi">코스피</button>
           <button class="chip" type="button" data-m="kosdaq">코스닥</button>
+          <button class="chip" type="button" data-m="konex">코넥스</button>
           <button class="chip" type="button" data-m="etf">ETF·ETN (거래세 면제)</button>
         </div>
         <div class="input-hint" id="market-hint">-</div>
@@ -829,7 +830,7 @@
       <li><b>실제 수익률</b> = 비용 차감 손익 ÷ 실제로 들어간 돈(국내: 매수금액 + 매수 수수료 / 미국: 환전 비용까지 포함한 원화 투입액).</li>
       <li><b>연환산 수익률</b> = (1 + 실제 수익률)^(365 ÷ 보유일) − 1. 보유 기간이 짧으면 숫자가 크게 부풀려 보이니 참고만 하세요.</li>
       <li><b>본전 매도가</b> = 수수료와 세금(미국은 환전·SEC fee·TAF까지)을 다 내고도 손실이 0원 이상이 되는 가장 낮은 매도가. 국내는 호가 단위로 올림, 미국은 매도 환율을 입력값 그대로 둔 <span data-rule="TRADE.usTick.1.1*100">1</span>센트 단위 올림입니다.</li>
-      <li><b>미국 원화 손익</b> = 원화로 받은 돈 − 원화로 낸 돈. 그중 <b>주가 손익</b> = 달러 손익 × 매도 환율, <b>환차손익</b> = 매수금액(달러) × (매도 환율 − 매수 환율)로 나눴고, 나머지가 비용입니다.</li>
+      <li><b>미국 원화 손익</b> = 원화로 받은 돈 − 원화로 낸 돈. 그중 <b>주가 손익</b> = 달러 손익 × 매수 환율, <b>환차손익</b> = 매도금액(달러) × (매도 환율 − 매수 환율)로 나눴고(해외주식 양도세 계산기의 주가 몫·환율 몫과 같은 나눔), 나머지가 비용입니다.</li>
       <li><b>환전 수수료</b>: % 입력이면 살 때 매매기준율 × (1 + 수수료율), 팔 때 × (1 − 수수료율)로 환전한다고 봤습니다. SEC fee·TAF는 센트 단위 올림, TAF는 최소 $<span data-rule="TRADE.tafMinUsd" data-fmt="f2">0.01</span>·최대 $<span data-rule="TRADE.tafMaxUsd" data-fmt="f2">9.79</span>(입력값 기준 최대치는 <span data-rule="meta.year" data-fmt="i">2026</span>년 요율 고정)입니다.</li>
       <li><b>연간 비용</b> = 이번 거래 1회 왕복 비용 × 1년 횟수(투자금 대비 %는 단순 합). 20년 그래프는 매년 (1 + 기대 수익률) × (1 − 1회 비용률)^횟수로 굴렸습니다.</li>
     </ul>
@@ -943,6 +944,7 @@ const TT = TR.TRADE, STT = TT.securitiesTransactionTax, OSR = TR.OVERSEAS_STOCK;
 const KR_TAX = {   // 증권거래세(stt) + 농어촌특별세(rural)
   kospi:  { stt: STT.kospi.stt,  rural: STT.kospi.rural,  label: '코스피' },
   kosdaq: { stt: STT.kosdaq.stt, rural: STT.kosdaq.rural, label: '코스닥' },
+  konex:  { stt: STT.konex.stt,  rural: STT.konex.rural,  label: '코넥스' },
   etf:    { stt: STT.etf.stt,    rural: STT.etf.rural,    label: 'ETF·ETN' },
 };
 const TAF_MAX = TT.tafMaxUsd;    // FINRA TAF 거래당 최대
@@ -1074,8 +1076,8 @@ function usCalc(i, over = {}) {
   const fxCostB = krwOut - usdOut * x.fxb;
   const fxCostS = usdIn * x.fxs - krwIn;
   const krwPL = krwIn - krwOut;
-  const stockPL = (sellAmt - buyAmt) * x.fxs;      // 주가 손익 (매도 환율로 환산)
-  const fxPL = buyAmt * (x.fxs - x.fxb);           // 환차손익 (매수 원금 기준)
+  const stockPL = (sellAmt - buyAmt) * x.fxb;      // 주가 손익 = 달러 손익 × 매수 환율 (overseas-stock-tax '주가 몫'과 같은 식)
+  const fxPL = sellAmt * (x.fxs - x.fxb);          // 환차손익 = 매도금액(달러) × (매도 환율 − 매수 환율) (같은 계산기 '환율 몫')
   const c = { buyFee: buyFee * x.fxb, sellFee: sellFee * x.fxs, sec: sec * x.fxs, taf: taf * x.fxs, fxB: fxCostB, fxS: fxCostS };
   const cost = c.buyFee + c.sellFee + c.sec + c.taf + c.fxB + c.fxS;
   const usdGross = sellAmt - buyAmt, usdNet = usdIn - usdOut;
@@ -1255,8 +1257,8 @@ function renderUS(inp) {
   let html = '';
   html += row('매수금액', `${usd(U.buyAmt)}<br><small>${won(U.buyAmt * inp.fxb)}</small>`, `${usdPrice(inp.ubp)} × ${inp.uq}주`);
   html += row('매도금액', `${usd(U.sellAmt)}<br><small>${won(U.sellAmt * inp.fxs)}</small>`, `${usdPrice(inp.usp)} × ${inp.uq}주`);
-  html += row('주가 손익', wonS(U.stockPL), `달러 손익 ${usdS(U.usdGross)} × 매도 환율`);
-  html += row('환차손익', wonS(U.fxPL), `매수금액 ${usd(U.buyAmt)} × (${inp.fxs.toLocaleString()} − ${inp.fxb.toLocaleString()})`);
+  html += row('주가 손익', wonS(U.stockPL), `달러 손익 ${usdS(U.usdGross)} × 매수 환율`);
+  html += row('환차손익', wonS(U.fxPL), `매도금액 ${usd(U.sellAmt)} × (${inp.fxs.toLocaleString()} − ${inp.fxb.toLocaleString()})`);
   html += row('매수 수수료', `${won(U.c.buyFee)}<br><small>${usd(U.buyFee)}</small>`, `매수금액 × ${rateTxt(inp.ufb)}`);
   html += row('매도 수수료', `${won(U.c.sellFee)}<br><small>${usd(U.sellFee)}</small>`, `매도금액 × ${rateTxt(inp.ufs)}`);
   html += row('SEC fee', `${won(U.c.sec)}<br><small>${usd(U.sec)}</small>`, `매도금액 × $${inp.sec}/100만 달러 (센트 올림)`);
@@ -1303,8 +1305,8 @@ function renderUS(inp) {
     breakdown: [['항목', '원화(원)', '달러', '계산'],
       ['매수금액', Math.round(U.buyAmt * inp.fxb), r2(U.buyAmt), `${inp.ubp} × ${inp.uq}주 · 환율 ${inp.fxb}`],
       ['매도금액', Math.round(U.sellAmt * inp.fxs), r2(U.sellAmt), `${inp.usp} × ${inp.uq}주 · 환율 ${inp.fxs}`],
-      ['주가 손익', Math.round(U.stockPL), r2(U.usdGross), '달러 손익 × 매도 환율'],
-      ['환차손익', Math.round(U.fxPL), '', '매수금액 × (매도 환율 − 매수 환율)'],
+      ['주가 손익', Math.round(U.stockPL), r2(U.usdGross), '달러 손익 × 매수 환율'],
+      ['환차손익', Math.round(U.fxPL), '', '매도금액 × (매도 환율 − 매수 환율)'],
       ['매수 수수료', Math.round(U.c.buyFee), U.buyFee, `${inp.ufb}%`], ['매도 수수료', Math.round(U.c.sellFee), U.sellFee, `${inp.ufs}%`],
       ['SEC fee', Math.round(U.c.sec), U.sec, `$${inp.sec}/100만 달러`], ['FINRA TAF', Math.round(U.c.taf), U.taf, `$${inp.taf}/주`],
       ['환전 비용(살 때)', Math.round(U.c.fxB), '', fxNote], ['환전 비용(팔 때)', Math.round(U.c.fxS), '', fxNote],
@@ -1433,7 +1435,8 @@ function renderInsightKR(inp, R, alt) {
   d.innerHTML =
     `지금 조건(${KR_TAX[inp.m].label}, 수수료 ${rateTxt(inp.fb)}/${rateTxt(inp.fs)})으로 한 번 사고팔 때 비용은 매수금액의 <strong>${pctN(R.c1, 3)}</strong>. 작아 보여도 매달 한 번씩 사고팔면 1년에 <strong>${pctN(yr)}</strong>가 빠져나갑니다.` +
     (share !== null ? ` 기대 수익률이 연 ${inp.r}%라면 그중 <strong>${pctN(Math.min(share, 9.99), 0)}</strong>를 비용이 가져가는 셈입니다.` : '') +
-    ` 국내 주식은 팔 때마다 증권거래세 ${KOSPI_STT_TXT}가 붙지만, <strong>ETF는 증권거래세가 면제</strong>라 같은 수수료로 12번 왕복해도 <strong>${pctN(etfC1 * n12)}</strong>입니다(주식이면 ${pctN(stockC1 * n12)}). 장기 투자에서 비용을 줄이는 순서는 ① 덜 사고팔기 ② 거래세 없는 ETF 활용 ③ 수수료 싼 곳 고르기입니다.`;
+    (inp.m === 'konex' ? ` 코넥스 주식은 팔 때마다 증권거래세 ${sttPct(KR_TAX.konex.stt + KR_TAX.konex.rural)}가 붙지만,` : ` 국내 주식은 팔 때마다 증권거래세 ${KOSPI_STT_TXT}가 붙지만,`) +
+    ` <strong>ETF는 증권거래세가 면제</strong>라 같은 수수료로 12번 왕복해도 <strong>${pctN(etfC1 * n12)}</strong>입니다(주식이면 ${pctN(stockC1 * n12)}). 장기 투자에서 비용을 줄이는 순서는 ① 덜 사고팔기 ② 거래세 없는 ETF 활용 ③ 수수료 싼 곳 고르기입니다.`;
 }
 function renderInsightUS(inp, U, noFx) {
   const t = document.getElementById('insight-title'), d = document.getElementById('insight-desc');
@@ -1561,7 +1564,7 @@ function updateDisplays() {
   document.getElementById('fx-hint').textContent = FXU === 'pct'
     ? '환전 스프레드 1%에 환율 우대 90%면 0.1%입니다. 증권사 앱의 \'환전 우대율\'을 확인하세요.'
     : '살 때는 매매기준율보다 이만큼 비싸게, 팔 때는 이만큼 싸게 환전한다고 봅니다(예: 스프레드 1% × 우대 90% ≈ 1달러당 1.4원).';
-  const mh = { kospi: `팔 때 증권거래세 ${sttPct(KR_TAX.kospi.stt)} + 농어촌특별세 ${sttPct(KR_TAX.kospi.rural)} = ${sttPct(KR_TAX.kospi.stt + KR_TAX.kospi.rural)} (2026년부터)`, kosdaq: `팔 때 증권거래세 ${sttPct(KR_TAX.kosdaq.stt)}, 농특세 없음 (2026년부터)`, etf: 'ETF·ETN은 팔 때 증권거래세가 없습니다. 수수료만 계산합니다' };
+  const mh = { kospi: `팔 때 증권거래세 ${sttPct(KR_TAX.kospi.stt)} + 농어촌특별세 ${sttPct(KR_TAX.kospi.rural)} = ${sttPct(KR_TAX.kospi.stt + KR_TAX.kospi.rural)} (2026년부터)`, kosdaq: `팔 때 증권거래세 ${sttPct(KR_TAX.kosdaq.stt)}, 농특세 없음 (2026년부터)`, konex: `팔 때 증권거래세 ${sttPct(KR_TAX.konex.stt)}, 농특세 없음`, etf: 'ETF·ETN은 팔 때 증권거래세가 없습니다. 수수료만 계산합니다' };
   document.getElementById('market-hint').textContent = mh[MARKET];
 }
 function applyTab() {
