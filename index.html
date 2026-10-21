@@ -830,7 +830,7 @@
       <li><b>실제 수익률</b> = 비용 차감 손익 ÷ 실제로 들어간 돈(국내: 매수금액 + 매수 수수료 / 미국: 환전 비용까지 포함한 원화 투입액).</li>
       <li><b>연환산 수익률</b> = (1 + 실제 수익률)^(365 ÷ 보유일) − 1. 보유 기간이 짧으면 숫자가 크게 부풀려 보이니 참고만 하세요.</li>
       <li><b>본전 매도가</b> = 수수료와 세금(미국은 환전·SEC fee·TAF까지)을 다 내고도 손실이 0원 이상이 되는 가장 낮은 매도가. 국내는 호가 단위로 올림, 미국은 매도 환율을 입력값 그대로 둔 <span data-rule="TRADE.usTick.1.1*100">1</span>센트 단위 올림입니다.</li>
-      <li><b>미국 원화 손익</b> = 원화로 받은 돈 − 원화로 낸 돈. 그중 <b>주가 손익</b> = 달러 손익 × 매수 환율, <b>환차손익</b> = 매도금액(달러) × (매도 환율 − 매수 환율)로 나눴고(해외주식 양도세 계산기의 주가 몫·환율 몫과 같은 나눔), 나머지가 비용입니다.</li>
+      <li><b>미국 원화 손익</b> = 원화로 받은 돈 − 원화로 낸 돈. 그중 <b>주가 몫</b> = 달러 손익 × 매수 환율, <b>환율 몫</b> = 매도금액(달러) × (매도 환율 − 매수 환율)로 나눴고(해외주식 양도세 계산기의 주가 몫·환율 몫과 같은 나눔), 나머지가 비용입니다.</li>
       <li><b>환전 수수료</b>: % 입력이면 살 때 매매기준율 × (1 + 수수료율), 팔 때 × (1 − 수수료율)로 환전한다고 봤습니다. SEC fee·TAF는 센트 단위 올림, TAF는 최소 $<span data-rule="TRADE.tafMinUsd" data-fmt="f2">0.01</span>·최대 $<span data-rule="TRADE.tafMaxUsd" data-fmt="f2">9.79</span>(입력값 기준 최대치는 <span data-rule="meta.year" data-fmt="i">2026</span>년 요율 고정)입니다.</li>
       <li><b>연간 비용</b> = 이번 거래 1회 왕복 비용 × 1년 횟수(투자금 대비 %는 단순 합). 20년 그래프는 매년 (1 + 기대 수익률) × (1 − 1회 비용률)^횟수로 굴렸습니다.</li>
     </ul>
@@ -1247,7 +1247,7 @@ function renderUS(inp) {
 
   setStat(1, '총 거래비용 (원화)', won(U.cost), `원화 투입액의 ${pctN(U.c1, 3)}`);
   setStat(2, '달러 손익', usdS(U.usdNet), `비용 전 ${usdS(U.usdGross)} · 수수료·SEC·TAF 차감`);
-  setStat(3, '원화 손익', wonS(U.krwPL), `주가 ${wonS(U.stockPL)} · 환차 ${wonS(U.fxPL)}`);
+  setStat(3, '원화 손익', wonS(U.krwPL), `주가 몫 ${wonS(U.stockPL)} · 환율 몫 ${wonS(U.fxPL)}`);
   if (be) setStat(4, '본전 매도가', usdPrice(be.price), `매수가보다 ${pctS(be.price / inp.ubp - 1)} · 매도 환율 ${inp.fxs.toLocaleString()}원 기준`);
   else setStat(4, '본전 매도가', '-', '');
 
@@ -1257,8 +1257,8 @@ function renderUS(inp) {
   let html = '';
   html += row('매수금액', `${usd(U.buyAmt)}<br><small>${won(U.buyAmt * inp.fxb)}</small>`, `${usdPrice(inp.ubp)} × ${inp.uq}주`);
   html += row('매도금액', `${usd(U.sellAmt)}<br><small>${won(U.sellAmt * inp.fxs)}</small>`, `${usdPrice(inp.usp)} × ${inp.uq}주`);
-  html += row('주가 손익', wonS(U.stockPL), `달러 손익 ${usdS(U.usdGross)} × 매수 환율`);
-  html += row('환차손익', wonS(U.fxPL), `매도금액 ${usd(U.sellAmt)} × (${inp.fxs.toLocaleString()} − ${inp.fxb.toLocaleString()})`);
+  html += row('주가 몫', wonS(U.stockPL), `달러 손익 ${usdS(U.usdGross)} × 매수 환율`);
+  html += row('환율 몫', wonS(U.fxPL), `매도금액 ${usd(U.sellAmt)} × (${inp.fxs.toLocaleString()} − ${inp.fxb.toLocaleString()})`);
   html += row('매수 수수료', `${won(U.c.buyFee)}<br><small>${usd(U.buyFee)}</small>`, `매수금액 × ${rateTxt(inp.ufb)}`);
   html += row('매도 수수료', `${won(U.c.sellFee)}<br><small>${usd(U.sellFee)}</small>`, `매도금액 × ${rateTxt(inp.ufs)}`);
   html += row('SEC fee', `${won(U.c.sec)}<br><small>${usd(U.sec)}</small>`, `매도금액 × $${inp.sec}/100만 달러 (센트 올림)`);
@@ -1305,8 +1305,8 @@ function renderUS(inp) {
     breakdown: [['항목', '원화(원)', '달러', '계산'],
       ['매수금액', Math.round(U.buyAmt * inp.fxb), r2(U.buyAmt), `${inp.ubp} × ${inp.uq}주 · 환율 ${inp.fxb}`],
       ['매도금액', Math.round(U.sellAmt * inp.fxs), r2(U.sellAmt), `${inp.usp} × ${inp.uq}주 · 환율 ${inp.fxs}`],
-      ['주가 손익', Math.round(U.stockPL), r2(U.usdGross), '달러 손익 × 매수 환율'],
-      ['환차손익', Math.round(U.fxPL), '', '매도금액 × (매도 환율 − 매수 환율)'],
+      ['주가 몫', Math.round(U.stockPL), r2(U.usdGross), '달러 손익 × 매수 환율'],
+      ['환율 몫', Math.round(U.fxPL), '', '매도금액 × (매도 환율 − 매수 환율)'],
       ['매수 수수료', Math.round(U.c.buyFee), U.buyFee, `${inp.ufb}%`], ['매도 수수료', Math.round(U.c.sellFee), U.sellFee, `${inp.ufs}%`],
       ['SEC fee', Math.round(U.c.sec), U.sec, `$${inp.sec}/100만 달러`], ['FINRA TAF', Math.round(U.c.taf), U.taf, `$${inp.taf}/주`],
       ['환전 비용(살 때)', Math.round(U.c.fxB), '', fxNote], ['환전 비용(팔 때)', Math.round(U.c.fxS), '', fxNote],
@@ -1322,7 +1322,7 @@ function renderUS(inp) {
     '[주식 거래비용 계산 · 미국주식]',
     `${usdPrice(inp.ubp)} × ${inp.uq.toLocaleString()}주 매수(환율 ${inp.fxb.toLocaleString()}원) → ${usdPrice(inp.usp)} 매도(환율 ${inp.fxs.toLocaleString()}원)`,
     `달러 손익 ${usdS(U.usdGross)} → 수수료·SEC·TAF 차감 ${usdS(U.usdNet)}`,
-    `원화 손익 ${wonS(U.krwPL)} (주가 ${wonS(U.stockPL)} · 환차 ${wonS(U.fxPL)} · 비용 -${won(U.cost)})`,
+    `원화 손익 ${wonS(U.krwPL)} (주가 몫 ${wonS(U.stockPL)} · 환율 몫 ${wonS(U.fxPL)} · 비용 -${won(U.cost)})`,
     `비용: 수수료 ${won(U.c.buyFee + U.c.sellFee)} · 환전 ${won(U.c.fxB + U.c.fxS)} · SEC ${won(U.c.sec)} · TAF ${won(U.c.taf)}`,
     `실제 원화 수익률 ${pctS(U.ret)}`,
     be ? `본전 매도가 ${usdPrice(be.price)} (매도 환율 ${inp.fxs.toLocaleString()}원 기준)` : '',
